@@ -1,0 +1,24 @@
+BB:
+  where: "Runs/{fault_name}"
+  pattern:
+    - "*/BB/Acc/BB.bin"
+
+IM:
+  where: "Runs/{fault_name}"
+  pattern:
+    - "*/IM_calc/*.csv"
+
+Source:
+  where: "Data/Sources/{fault_name}"
+  pattern:
+    - "{fault_name}.info"
+    - "{fault_name}.csv"
+    - "Srf/*REL*.info"
+    - "Srf/*REL*.csv"
+
+VM:
+  where: "Data/VMs/{fault_name}"
+  pattern:
+      - "vm_params.yaml"
+      - "nzvm.cfg"
+      - "$*.pertb.csv"

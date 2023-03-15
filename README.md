@@ -114,7 +114,9 @@ AssertionError: ---   FAILED !!!!!!!
 ```
 In this case, `BooBooEAST.info` was not found in `/nesi/nobackup/nesi00213/RunFolder/Cybershake/v22p12/Data/Sources/BooBooEAST`: You can investigate.
 
-## Step 3. If all good, we can start upload files using `cs_dropbox_sync.py`. It uses 3 arguments. 
+## Step 3. Upload
+
+If all good, we can start upload files using `cs_dropbox_sync.py`. It uses 3 arguments. 
 ```
 usage: cs_dropbox_sync.py [-h] [--nproc NPROC] cs_root files_to_sync tmp_dir
 

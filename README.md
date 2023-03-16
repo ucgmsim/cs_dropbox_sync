@@ -14,13 +14,9 @@ and make sure you have ~/.config/rclone/rclone.conf.
 
 ## Step 1. Edit sync_patterns.yaml
 
-For each data type, it has `where` and `pattern` fields. 
-Note that Source pattern `Srf/{fault_name}.info` and `Srf/{fault_name}.csv`used to be `{fault_name}.info` `{fault_name}.csv` pre v22p12.
-A pattern starting with `$` means it is *optional*. Currently only `*.pertb.csv` is optional.
-When the script gets executed, it doesn't know if this CS run has perturbed VMs. 
-During the run, if the script sees no file matching this pattern, it determines this run is not VM-perturbed. So the test passes if no `*.pertb.csv` is found.
-On the other hand, if it encounters any `*.pertb.csv`, it determins this run *is* VM-perturbed, and the test only passes if as many numbers of `*.pertb.csv` as RELs are found/
+The script will select files to archive based on this YAML file. For each data type, it has `where` and `pattern` fields.
 
+Note that Source pattern `Srf/{fault_name}.info` and `Srf/{fault_name}.csv`used to be `{fault_name}.info` `{fault_name}.csv` pre v22p12.
 
 ```
   1 BB:
@@ -50,6 +46,17 @@ On the other hand, if it encounters any `*.pertb.csv`, it determins this run *is
 ~                                
 
 ```
+
+### Optional pattern
+A pattern starting with `$` means it is *optional*. Currently only `*.pertb.csv` is optional.
+
+When the script gets executed, it doesn't know if this CS run has perturbed VMs. 
+
+During the run, if the script sees no file matching this pattern, it determines this run is not VM-perturbed. So the test passes if no `*.pertb.csv` is found.
+
+On the other hand, if it encounters any `*.pertb.csv`, it determins this run *is* VM-perturbed, and the test only passes if as many numbers of `*.pertb.csv` as RELs are found/
+
+
 
 ## Step 2: Check the integrity of the CS run
 
@@ -99,7 +106,10 @@ OhariuC
 ======== Completed. List of files to sync is written to /scale_wlg_persistent/filesets/home/baes/cs_dropbox_sync/files_to_sync.yaml
 
 ```
+If all went well, you will have an output file `files_to_sync.yaml`, the list of files to upload. 
+
 If there is anything missing, AssertionError will catch it.
+
 ```
 - Check Source in /nesi/nobackup/nesi00213/RunFolder/Cybershake/v22p12/Data/Sources/BooBooEAST
 --  Check BooBooEAST.info
@@ -112,7 +122,7 @@ Traceback (most recent call last):
 AssertionError: ---   FAILED !!!!!!!
 
 ```
-In this case, `BooBooEAST.info` was not found in `/nesi/nobackup/nesi00213/RunFolder/Cybershake/v22p12/Data/Sources/BooBooEAST`: You can investigate.
+In this case, `BooBooEAST.info` was not found in `/nesi/nobackup/nesi00213/RunFolder/Cybershake/v22p12/Data/Sources/BooBooEAST`.
 
 ## Step 3. Upload
 
@@ -128,9 +138,13 @@ positional arguments:
 optional arguments:
   -h, --help     show this help message and exit
 ```
-`files_to_sync` is the output file from Step 2. ie. 
+
+Note that `files_to_sync` is the output file from Step 2. 
+
+Let's have a peek.
 
 ```
+
 (python3_mahuika) baes@mahuika01: ~/cs_dropbox_sync$ head -10 files_to_sync.yaml 
 BooBooEAST:
   BB:
@@ -144,7 +158,10 @@ BooBooEAST:
     /nesi/nobackup/nesi00213/RunFolder/Cybershake/v22p12/Runs/BooBooEAST/BooBooEAST_REL08/BB/Acc/BB.bin: 1560129496
 ...
 ```
-This is the list of files to be uploaded, and their file size (used for verification before making a TAR ball).
+This file contains a structured list of files to be uploaded, and their file size (used for verification before making a TAR ball).
+
+This script will copy these files from the original location to a temp directory, make 3 TAR balls (Source, IM and BB) and upload to Dropbox.
+
 Note that uploading can take a VERY LONG time, so it's best to run this in a `screen` session.
 
 ```

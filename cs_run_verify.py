@@ -35,15 +35,18 @@ def cherrypick_files(where, pattern, num):
 
     if "*" in pattern: #looking for multiple
         result=list(where.glob(pattern))
-        print(f"---   multiple expected: {len(result)}")
+        print(f"---   multiple expected: {num}")
         if optional:
             if len(result) > 0: #ok, now this MUST match num (ie. no longer optional)
-                print(f"---   this is a MUST")
+                print(f"---   Now, must find {num}")
                 optional=False
         return (not optional and len(result)==num), result
     else: #single match
         found = Path(where/pattern).exists()
         print(f"---   single expected: {found}")
+# TODO: thw following might be needed for completeness, but we have no use for this yet.
+#        if optional:
+#            return True, [Path(where/pattern)] if found else []
         return found, [Path(where/pattern)]
 
         

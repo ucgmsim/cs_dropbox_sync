@@ -138,6 +138,7 @@ if __name__ == "__main__":
     cs_ver = cs_root.name
 
     work_root = tmp_dir/f"{cs_ver}"
+    work_root.mkdir(parents=True, exist_ok=True)
 
     dropbox_path = f"dropbox:/Cybershake/{cs_ver}"
 

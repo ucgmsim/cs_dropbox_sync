@@ -11,8 +11,8 @@ IM:
 Source:
   where: "Data/Sources/{fault_name}"
   pattern:
-    - "{fault_name}.info"
-    - "{fault_name}.csv"
+    - "Srf/{fault_name}.info"
+    - "Srf/{fault_name}.csv"
     - "Srf/*REL*.info"
     - "Srf/*REL*.csv"
 

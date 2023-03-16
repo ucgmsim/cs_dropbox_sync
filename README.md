@@ -1,4 +1,4 @@
-# cs_dropbox_sync
+# cs_dropbox_upload
 Upload Cybershake runs to Dropbox
 
 # How to run
@@ -64,7 +64,7 @@ Takes 2 inputs. The CS root directory, and the fault list file.
 
 eg. 
 ```
-(python3_mahuika) baes@mahuika01: ~/cs_dropbox_sync$ python cs_run_verify.py /nesi/nobackup/nesi00213/RunFolder/Cybershake/v22p12 /nesi/nobackup/nesi00213/RunFolder/Cybershake/v22p12/list.txt 
+(python3_mahuika) baes@mahuika01: ~/cs_dropbox_upload$ python cs_run_verify.py /nesi/nobackup/nesi00213/RunFolder/Cybershake/v22p12 /nesi/nobackup/nesi00213/RunFolder/Cybershake/v22p12/list.txt 
 
 ...
 
@@ -103,7 +103,7 @@ OhariuC
 ---   Now, must find 31
 ---   Passed
 
-======== Completed. List of files to sync is written to /scale_wlg_persistent/filesets/home/baes/cs_dropbox_sync/files_to_sync.yaml
+======== Completed. List of files to sync is written to /scale_wlg_persistent/filesets/home/baes/cs_dropbox_upload/files_to_sync.yaml
 
 ```
 If all went well, you will have an output file `files_to_sync.yaml`, the list of files to upload. 
@@ -126,9 +126,9 @@ In this case, `BooBooEAST.info` was not found in `/nesi/nobackup/nesi00213/RunFo
 
 ## Step 3. Upload
 
-If all good, we can start upload files using `cs_dropbox_sync.py`. It uses 3 arguments. 
+If all good, we can start upload files using `cs_dropbox_upload.py`. It uses 3 arguments. 
 ```
-usage: cs_dropbox_sync.py [-h] [--nproc NPROC] cs_root files_to_sync tmp_dir
+usage: cs_dropbox_upload.py [-h] [--nproc NPROC] cs_root files_to_sync tmp_dir
 
 positional arguments:
   cs_root        Path to CS root
@@ -145,7 +145,7 @@ Let's have a peek.
 
 ```
 
-(python3_mahuika) baes@mahuika01: ~/cs_dropbox_sync$ head -10 files_to_sync.yaml 
+(python3_mahuika) baes@mahuika01: ~/cs_dropbox_upload$ head -10 files_to_sync.yaml 
 BooBooEAST:
   BB:
     /nesi/nobackup/nesi00213/RunFolder/Cybershake/v22p12/Runs/BooBooEAST/BooBooEAST_REL01/BB/Acc/BB.bin: 1560129496
@@ -165,7 +165,7 @@ This script will copy these files from the original location to a temp directory
 Note that uploading can take a VERY LONG time, so it's best to run this in a `screen` session.
 
 ```
-(python3_mahuika) baes@mahuika01: ~/cs_dropbox_sync$ python cs_dropbox_sync.py /nesi/nobackup/nesi00213/RunFolder/Cybershake/v22p12 ./files_to_sync.yaml /nesi/nobackup/nesi00213/tmp/baes
+(python3_mahuika) baes@mahuika01: ~/cs_dropbox_upload$ python cs_dropbox_upload.py /nesi/nobackup/nesi00213/RunFolder/Cybershake/v22p12 ./files_to_sync.yaml /nesi/nobackup/nesi00213/tmp/baes
 #### Files already uploaded at dropbox:/Cybershake/v22p12
 {'BooBooEAST': [], 'DryHuang': [], 'Moonshine': [], 'OhariuC': []}
 #### Copy BooBooEAST Source files to /nesi/nobackup/nesi00213/tmp/baes/v22p12/BooBooEAST/Source
@@ -211,7 +211,7 @@ Upon each upload, it will update a progress file under `tmp_dir`. The progress f
 # File integrity and verification
 The integrity of individual file is *NOT* tested by this code. However, we considered the following steps to make sure the files don't get corrupted.
 1. Check if everything is in place. Done by `cs_run_verify.py`. 
-2. Check if the copied version is identical to the original before making a TAR ball : Done by `cs_dropbox_sync.py`. The files_to_sync.yaml contains the file size info. If both files have the same file size, we consider they are identical. (Checksum is an overkill for local file copy)
+2. Check if the copied version is identical to the original before making a TAR ball : Done by `cs_dropbox_upload.py`. The files_to_sync.yaml contains the file size info. If both files have the same file size, we consider they are identical. (Checksum is an overkill for local file copy)
 3. We assume making a TAR file is error-free.
 4. Dropbox upload: rclone upload is known to do the checksum test, and the file upload is *atomic*, meaning it is all or nothing. If it is found on Dropbox, it is guaranteed to be identical to the original. 
 

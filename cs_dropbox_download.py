@@ -14,7 +14,7 @@ def load_args():
     parser.add_argument(
         "dropbox_cs_ver",type=str, help="CS ver stored in Dropbox")
     parser.add_argument(
-        '-t', "--data_types", help="Data types to download. Gets all BB, IM, Source if not specified",action='append', default=[])
+        '-t', "--data_types", help="Data types to download. Gets all BB, IM, Source if not specified",action='append', choices=DATA_TYPES, default=[])
     parser.add_argument(
         "--download_dir",help="Download directory. Current directory/{CS ver} if not specified", type=Path, default="")
     parser.add_argument(
@@ -23,9 +23,6 @@ def load_args():
     args = parser.parse_args()
     if args.data_types == []:
         args.data_types = DATA_TYPES
-    else:
-        for t in args.data_types:
-            assert t in DATA_TYPES, f"Not a valid data type: {t}"
 
     if args.download_dir =="":
         args.download_dir = Path.cwd() 

@@ -9,6 +9,7 @@ OPTIONAL_PATTERN_MARKER="$"
 
 #cs_root=Path("/scratch/x2568a02/UC/RunFolder/Cybershake/v22p4")
 FILES_DICT_FILE = Path().cwd()/"files_to_sync.yaml"
+DATA_TYPES = ['Source','IM','BB']
 
 
 def load_args():
@@ -19,9 +20,18 @@ def load_args():
     parser.add_argument(
         "fault_list",type=Path, help="List of fault and its realisation numbers", default=Path.cwd()/"list.txt")
     parser.add_argument(
+        "--config", type=Path, help="Config file containing file patterns to sync", default=Path.cwd()/CONFIG)
+    parser.add_argument(
         "--out_file",type=Path, help="List of files to sync", default=FILES_DICT_FILE
     )
+    parser.add_argument(
+        '-t', "--data_types", help="Data types to download. Gets all BB, IM, Source if not specified",action='append', choices=DATA_TYPES, default=[])
+
     args = parser.parse_args()
+
+    if args.data_types == []:
+        args.data_types = DATA_TYPES
+
     return args
 
 
@@ -74,6 +84,7 @@ if __name__ == "__main__":
     cs_root = args.cs_root
     fault_list = args.fault_list
     out_file = args.out_file
+    data_types = args.data_types
 
     assert cs_root.exists()
     assert fault_list.exists()
@@ -96,7 +107,7 @@ if __name__ == "__main__":
     for fault_name in list(rel_num_dict.keys()):
         print(f"{fault_name}")
         files_dict[fault_name]={}
-        for data_type in config.keys():
+        for data_type in data_types:
             files_dict[fault_name][data_type]={}
             test_all_exist(data_type, fault_name)
 

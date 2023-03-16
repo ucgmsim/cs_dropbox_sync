@@ -52,10 +52,9 @@ A pattern starting with `$` means it is *optional*. Currently only `*.pertb.csv`
 
 When the script gets executed, it doesn't know if this CS run has perturbed VMs. 
 
-During the run, if the script sees no file matching this pattern, it determines this run is not VM-perturbed. So the test passes if no `*.pertb.csv` is found.
+During the run, if the script sees no file matching this pattern, it determines this run is not VM-perturbed. As `*.pertb.csv` pattern is marked as *optional*, the test passes if no match is found.
 
-On the other hand, if it encounters any `*.pertb.csv`, it determins this run *is* VM-perturbed, and the test only passes if as many numbers of `*.pertb.csv` as RELs are found/
-
+On the other hand, if it encounters any `*.pertb.csv`, it determins this run *is* VM-perturbed. Then we must find as many numbers of `*.pertb.csv` as RELs to pass the test.
 
 
 ## Step 2: Check the integrity of the CS run

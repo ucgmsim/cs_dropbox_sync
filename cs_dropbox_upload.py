@@ -202,31 +202,6 @@ def upload(fault_name): # doesn't care about data types. Just upload everything 
         print(f"#### Uploading {to_upload_dir} completed")
 
     tar_files_found = retrieve_dropbox_files(dropbox_dir, check_tar=True)
-    
-
-    p=subprocess.Popen(f"rclone ls {dropbox_dir}",shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-    out,err= p.communicate()
-    if err:
-        print(f"#### ERRORL Something wrong with {tf.name} upload")
-
-    lines = out.decode("utf-8").split("\n")
-
-    tar_files_found = []
-    for line in lines: # examine all files in dropbox_path
-        try: 
-            _, tar_file = line.split()  
-        except ValueError:  
-            continue 
-        try:     
-            chunks = tar_file.split(".tar")[0].split("_")
-        except ValueError:  
-            continue 
-        if len(chunks) >1:
-            pass
-        else: # n t a file we are after
-            continue 
-
-        tar_files_found.append(tar_file)
 
     if len(set(tar_files_to_upload) - set(tar_files_found)) > 0:
         all_good = False
@@ -262,7 +237,8 @@ def update_uploaded(fault_name,data_type):
     if data_type == []:
         uploaded[fault_name]=[]
     else:
-        uploaded[fault_name].append(data_type)
+        if data_type not in uploaded[fault_name]:
+            uploaded[fault_name].append(data_type)
     print(f"write to {work_root}/{fault_name}_{UPLOAD_REPORT}")
 
     with open(work_root/f"{fault_name}_{UPLOAD_REPORT}","w") as f:
@@ -368,7 +344,7 @@ if __name__ == "__main__":
         #TODO: upload only when needed
         upload_ok, tar_files_uploaded = upload(fault_name)
         if upload_ok:
-            check_uploaded_tar_files(tar_files) 
+            check_uploaded_tar_files(tar_files_uploaded) 
 
 
     print(f"#### Completed")

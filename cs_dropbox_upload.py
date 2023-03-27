@@ -1,12 +1,10 @@
 import argparse
 import os
 from pathlib import Path
-from multiprocessing import Pool
 
 import subprocess
 import shutil
 import yaml
-
 
 
 FILE_PATTERN_CONF="sync_patterns.yaml"
@@ -110,23 +108,24 @@ def pack(fault_name, data_type):
     tarfile_prefix_inc_path=to_upload_root/fault_name/tarfile_prefix
 
     all_good = copy_files(fault_name, data_type, work_dir)
-    if data_type == "Source":
+
+    if data_type == "Source": # if "Source" is specified, we also need to look after "VM"
         all_good = all_good and copy_files(fault_name, "VM", work_dir)
 
 
     all_files = sorted(list(work_dir.glob("*")))
 
 
-    partition_list = __make_partition(all_files)
+    partition_list = __make_partition(all_files) # make partitions if total file size exceeds limit
 
     if len(partition_list) == 1: #single TAR file
         tar_files = [Path(f"{tarfile_prefix_inc_path}.tar")] 
     else:
-        print(f"#### TAR file too large. Making {len(partition_list)} partitions")
+        print(f"#### TAR file too large. Made {len(partition_list)} partitions")
         tar_files = []
         for i in range(len(partition_list)):
             if i == len(partition_list)-1:
-                num = f"{i}f" # the last TAR file ends with "f", eg. HikHBaymax_BBi_3f.tar
+                num = f"{i}f" # the last TAR file ends with "f" for completeness test, eg. HikHBaymax_BBi_3f.tar
             else:
                 num = i
             tar_files.append(Path(f"{tarfile_prefix_inc_path}_{num}.tar"))
@@ -150,34 +149,40 @@ def pack(fault_name, data_type):
         print(out)
         print(err)
     
-    return all_good
+    return all_good # Limitation: file copy was good - we assume TAR was succcessful.
 
+
+:102,152s/partition_list/tar_group/g
 def retrieve_dropbox_files(dropbox_link, check_tar=False):
+    # check_tar = True enforces collection of "desirable" TAR files only
+
     files_found = []
-    p=subprocess.Popen(f"rclone ls {dropbox_link}",shell=True,stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    cmd=f"rclone ls {dropbox_link}"
+    p=subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out,err=p.communicate()
     lines=out.decode('utf-8').split("\n")
     for line in lines:
         try:
-            _, filepath = line.split()
+            _, filepath = line.split() # returns size, filepath
         except ValueError:
             continue
-        a_file = Path(filepath).name
+        filename = Path(filepath).name # just focus on the file name
         if check_tar:
             try:
-                chunks = a_file.split(".tar")[0].split("_")
+                chunks = filename.split(".tar")[0].split("_") # eg. FiordSZ03_BB.tar, FiordSZ03_BB_1.tar
             except ValueError:
                 continue
-            if len(chunks) >1:
+            if len(chunks) >1: # should be either 2 or 3
                 pass
             else: # not a file we are after, skip
                 continue
-        print(a_file)
-        files_found.append(a_file)
+        print(filename)
+        files_found.append(filename)
 
     return files_found
  
-def upload(fault_name): # doesn't care about data types. Just upload everything in the directory
+def upload(fault_name): # Just upload everything from this fault_name's to_upload directory. 
+    # rclone uploads multiple files from the directory in parallel, maximising upload traffic
     dropbox_dir = f"{dropbox_path}/{fault_name}"
     p=subprocess.Popen(f"rclone mkdir {dropbox_dir}",shell=True,stdout=subprocess.PIPE)
     p.communicate()
@@ -186,13 +191,14 @@ def upload(fault_name): # doesn't care about data types. Just upload everything 
     to_upload_dir = to_upload_root/fault_name
     tar_files_to_upload = [tf.name for tf in list(to_upload_dir.glob(tar_file))]
 
-    all_good = True
+    upload_num_mathces = True
    
     # rclone copy {src} dropbox:{dest}
     # 1. {src} is a file, and {dest} is a file, trivial
     # 2. {src} is a file, {dest} is a directory, the file will be placed under {dest}
     # 3. {src} is a directory, {dest} is a directory, all files under {src} will be copied to {dest}. No directory made
     # 4. {src} is a directory, {dest} is a file, error.
+
     logfile = to_upload_root/f"{fault_name}_progress.log"
     print(f"#### Uploading {to_upload_dir} to {dropbox_dir}. Check progress with tail -f {str(logfile)}")
     with open(logfile,"w") as f:
@@ -203,11 +209,11 @@ def upload(fault_name): # doesn't care about data types. Just upload everything 
     tar_files_found = retrieve_dropbox_files(dropbox_dir, check_tar=True)
 
     if len(set(tar_files_to_upload) - set(tar_files_found)) > 0:
-        all_good = False
+        upload_num_mathces = False
 
-    return all_good, tar_files_found
+    return upload_num_mathces, tar_files_found
 
-class partition:
+class TARGroup:
     def __init__(self):
         self.found_partitions=[]
         self.size = None
@@ -231,7 +237,7 @@ class partition:
         return self.size == len(self.found_partitions)
         
 
-def update_uploaded(fault_name,data_type):
+def mark_uploaded(fault_name,data_type):
     if data_type == []:
         uploaded[fault_name]=[]
     else:
@@ -242,17 +248,17 @@ def update_uploaded(fault_name,data_type):
     with open(work_root/f"{fault_name}_{UPLOAD_REPORT}","w") as f:
         yaml.dump(uploaded[fault_name],f)
 
-def check_uploaded_tar_files(tar_files):
-    partitions={}
+def update_uploaded_status(tar_files):
+    tar_group={}
     for tar_file in tar_files:
         try:
             chunks = tar_file.split(".tar")[0].split("_")
         except ValueError:  
             continue
-        if len(chunks)==2:
+        if len(chunks)==2: # single tar file
             fault_name, data_type = chunks
             num = None
-        elif len(chunks)==3:
+        elif len(chunks)==3: # this belongs to a tar group
             fault_name, data_type, num = chunks
         else:
             #this is not in the format we want, pass
@@ -261,20 +267,20 @@ def check_uploaded_tar_files(tar_files):
             continue # unknown type
         else:    
 #           print(f"{fault_name} {data_type} {size}")
-    #        uploaded[fault_name].append(data_type)
-            if num is None:
+            if num is None: # single tar file
                 #easy, this has been uploaded.
-                update_uploaded(fault_name,data_type)
+                mark_uploaded(fault_name,data_type)
 
-            else: #considered true when 
-                print(f"{fault_name} {data_type} has partitions")
-                if (fault_name, data_type) not in partitions:
-                    partitions[(fault_name,data_type)]=partition()
-                this_partition = partitions[(fault_name,data_type)]
-                this_partition.found(num)
-                if this_partition.all_found():
+            else: # tar group is considered fully uploaded if below satisfies
+                print(f"{fault_name} {data_type} has tar_group")
+                if (fault_name, data_type) not in tar_group:
+                    # this is an unknown tar group. Create one and start tracking
+                    tar_group[(fault_name,data_type)]=TARGroup()
+                this_tar_group = tar_group[(fault_name,data_type)] # retrieve a relevant tar group
+                this_tar_group.found(num) # report "num"-th partition has been found
+                if this_tar_group.all_found():
                     print(f"{fault_name} {data_type} uploaded all partitions")
-                    update_uploaded(fault_name,data_type)
+                    mark_uploaded(fault_name,data_type)
 
 
 if __name__ == "__main__":
@@ -295,7 +301,7 @@ if __name__ == "__main__":
     
     tmp_dir.mkdir(exist_ok=True, parents=True)
 
-    cs_ver = cs_root.name
+    cs_ver = cs_root.resolve().name
 
     work_root = tmp_dir/f"{cs_ver}"
     to_pack_root = work_root / "to_pack"
@@ -312,20 +318,20 @@ if __name__ == "__main__":
         files_dict=yaml.safe_load(f)
  
     fault_names= sorted(files_dict.keys())
-    fault_names.remove(".") # remove "." from the fault_names list.
-  
-    for misc_file in list(files_dict['.'].keys()):
-        p=subprocess.Popen(f"rclone --progress copy {misc_file} {dropbox_path}",shell=True,stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        p.communicate()
+    if "." in fault_names:
+        fault_names.remove(".") # remove "." from the fault_names list.
+        print(f"#### Uploading misc files from root") 
+        for misc_file in list(files_dict['.'].keys()):
+            p=subprocess.Popen(f"rclone --progress copy {misc_file} {dropbox_path}",shell=True,stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            p.communicate()
 
     uploaded={} 
     for fault_name in fault_names:
-        #uploaded[fault_name]=[]
-        update_uploaded(fault_name,[])
+        mark_uploaded(fault_name,[])
    
     tar_files = retrieve_dropbox_files(dropbox_path)
     print(tar_files)
-    check_uploaded_tar_files(tar_files)
+    update_uploaded_status(tar_files)
 
 
     print(f"#### Files already uploaded at {dropbox_path}")    
@@ -347,13 +353,12 @@ if __name__ == "__main__":
                 if not pack_ok[data_type]:
                     print(f"#### {fault_name} {data_type} packing failed - Upload skipped")
                     continue
-        # upload all data_types
-        #TODO: upload only when needed
-        
+       
+        # if any TAR files have been produced for upload, go ahead 
         if any(pack_ok.values()):
-            upload_ok, tar_files_uploaded = upload(fault_name)
-            if upload_ok:
-                check_uploaded_tar_files(tar_files_uploaded) 
+            upload_basic_check_ok, tar_files_uploaded = upload(fault_name)
+            if upload_basic_check_ok: 
+                update_uploaded_status(tar_files_uploaded) 
 
     print(f"#### Completed")
 #

@@ -11,8 +11,12 @@ IM:
 Source:
   where: "Data/Sources/{fault_name}"
   pattern:
-    - "Srf/{fault_name}.info"
-    - "Srf/{fault_name}.csv"
+# Old CS runs
+    - "{fault_name}.info"
+    - "{fault_name}.csv"
+# New CS runs
+#  - "Srf/{fault_name}.info"
+#  - "Srf/{fault_name}.csv"
     - "Srf/*REL*.info"
     - "Srf/*REL*.csv"
 

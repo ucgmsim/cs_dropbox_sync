@@ -49,6 +49,7 @@ def cherrypick_files(where, pattern, num):
 
     if "*" in pattern: #looking for multiple
         result=list(where.glob(pattern))
+        print(result)
         print(f"---   multiple expected: {num}")
         if optional:
             if len(result) > 0: #ok, now this MUST match num (ie. no longer optional)
@@ -149,9 +150,15 @@ if __name__ == "__main__":
             files_dict[fault_name][data_type]={}
             test_all_exist(data_type, fault_name)
 
+    stocktake_df.to_csv(stocktake_csv)
+    
+    files_dict["."]={} # special section to list stocktake.csv and list.txt
+    files_dict["."][str(fault_list)]= fault_list.stat().st_size
+    files_dict["."][str(stocktake_csv)] = stocktake_csv.stat().st_size
+
+    print(files_dict)
     with open(out_file,"w") as f:
         yaml.dump(files_dict,f)
 
-    stocktake_df.to_csv(stocktake_csv)
     print(f"======== Completed. List of files to sync is written to {out_file} and {stocktake_csv}")
 

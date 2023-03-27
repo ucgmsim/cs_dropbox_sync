@@ -88,15 +88,15 @@ def __make_partition(all_files):
         else: # including this will exceed. Finalize the current subset, start a new one
             #TODO: f is assumned to be smaller than the size limit
             partition_list.append(one_partition)
-            print(one_partition)
-            print(partition_size)
+           # print(one_partition)
+           # print(partition_size)
             partition_size = f.stat().st_size
             one_partition = [f]
 
     if one_partition: # last partition
         partition_list.append(one_partition)
-        print(one_partition)
-        print(partition_size)
+        # print(one_partition)
+        # print(partition_size)
     return partition_list
 
 
@@ -106,7 +106,6 @@ def pack(fault_name, data_type):
     tarfile_prefix=f"{fault_name}_{data_type}"
 
     to_upload_dir = to_upload_root / fault_name
-    to_upload_dir.mkdir(parents=True,exist_ok=True)
 
     tarfile_prefix_inc_path=to_upload_root/fault_name/tarfile_prefix
 
@@ -205,7 +204,6 @@ def upload(fault_name): # doesn't care about data types. Just upload everything 
 
     if len(set(tar_files_to_upload) - set(tar_files_found)) > 0:
         all_good = False
-   
 
     return all_good, tar_files_found
 
@@ -294,7 +292,8 @@ if __name__ == "__main__":
 
     assert cs_root.exists()
     assert files_to_sync.exists()
-    assert os.access(tmp_dir, os.X_OK | os.W_OK) # check if writing to tmp_dir is ok
+    
+    tmp_dir.mkdir(exist_ok=True, parents=True)
 
     cs_ver = cs_root.name
 
@@ -313,7 +312,12 @@ if __name__ == "__main__":
         files_dict=yaml.safe_load(f)
  
     fault_names= sorted(files_dict.keys())
-   
+    fault_names.remove(".") # remove "." from the fault_names list.
+  
+    for misc_file in list(files_dict['.'].keys()):
+        p=subprocess.Popen(f"rclone --progress copy {misc_file} {dropbox_path}",shell=True,stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        p.communicate()
+
     uploaded={} 
     for fault_name in fault_names:
         #uploaded[fault_name]=[]
@@ -331,18 +335,25 @@ if __name__ == "__main__":
 
         # packing all data_types
         pack_ok={}.fromkeys(data_types)
+        to_upload_dir = to_upload_root / fault_name
+        if to_upload_dir.exists():
+            print(f"#### {to_upload_dir} already exists. Delete")
+            shutil.rmtree(to_upload_dir)
+
+        to_upload_dir.mkdir(parents=True,exist_ok=True)
         for data_type in data_types:
             if data_type not in uploaded[fault_name]:
                 pack_ok[data_type]=pack(fault_name, data_type)
                 if not pack_ok[data_type]:
-                    print(f"{fault_name} {data_type} packing failed - Upload skipped")
+                    print(f"#### {fault_name} {data_type} packing failed - Upload skipped")
                     continue
         # upload all data_types
         #TODO: upload only when needed
-        upload_ok, tar_files_uploaded = upload(fault_name)
-        if upload_ok:
-            check_uploaded_tar_files(tar_files_uploaded) 
-
+        
+        if any(pack_ok.values()):
+            upload_ok, tar_files_uploaded = upload(fault_name)
+            if upload_ok:
+                check_uploaded_tar_files(tar_files_uploaded) 
 
     print(f"#### Completed")
 #

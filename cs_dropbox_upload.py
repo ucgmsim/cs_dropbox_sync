@@ -327,9 +327,6 @@ if __name__ == "__main__":
     print(f"#### Files already uploaded at {dropbox_path}")    
     print(uploaded)
 
-    with open(FILE_PATTERN_CONF, "r") as f:
-        fpconf = yaml.safe_load(f)
-
     for fault_name in fault_names:
 
         # packing all data_types

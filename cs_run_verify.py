@@ -1,11 +1,13 @@
 import argparse
 import hashlib
-
+import pandas as pd
 from pathlib import Path
 import yaml
 
 CONFIG="sync_patterns.yaml"
 OPTIONAL_PATTERN_MARKER="$"
+
+STOCKTAKE_CSV="stocktake.csv"
 
 #cs_root=Path("/scratch/x2568a02/UC/RunFolder/Cybershake/v22p4")
 FILES_DICT_FILE = Path().cwd()/"files_to_sync.yaml"
@@ -20,10 +22,12 @@ def load_args():
     parser.add_argument(
         "fault_list",type=Path, help="List of fault and its realisation numbers", default=Path.cwd()/"list.txt")
     parser.add_argument(
-        "--config", type=Path, help="Config file containing file patterns to sync", default=Path.cwd()/CONFIG)
+        "--config", type=Path, help="Config file containing file patterns to sync", default=Path(__file__).parent.resolve()/CONFIG)
     parser.add_argument(
         "--out_file",type=Path, help="List of files to sync", default=FILES_DICT_FILE
     )
+    parser.add_argument(
+        "--stocktake_csv", type=Path, help="Stocktake CSV file", default=Path.cwd()/STOCKTAKE_CSV)
     parser.add_argument(
         '-t', "--data_types", help="Data types to download. Gets all BB, IM, Source if not specified",action='append', choices=DATA_TYPES, default=[])
 
@@ -50,14 +54,17 @@ def cherrypick_files(where, pattern, num):
             if len(result) > 0: #ok, now this MUST match num (ie. no longer optional)
                 print(f"---   Now, must find {num}")
                 optional=False
-        return (not optional and len(result)==num), result
+        found = (not optional and len(result)==num)
+        return found, result
     else: #single match
         found = Path(where/pattern).exists()
         print(f"---   single expected: {found}")
+        files = [Path(where/pattern)] if found else []
+
 # TODO: thw following might be needed for completeness, but we have no use for this yet.
 #        if optional:
 #            return True, [Path(where/pattern)] if found else []
-        return found, [Path(where/pattern)]
+        return found, files
 
         
 def test_all_exist(data_type, fault_name):
@@ -66,32 +73,49 @@ def test_all_exist(data_type, fault_name):
     where = cs_root / config[data_type]['where'].format(fault_name=fault_name)#
     print(f"- Check {data_type} in {where}")
     for pat in config[data_type]['pattern']:
+        wpat=pat.format(fault_name="*")
+        col_num = f"num({data_type}_{wpat})"
+        col_ok = f"OK({data_type}_{wpat})"
         pat = pat.format(fault_name=fault_name)
         print(f"--  Check {pat}")
         found, files = cherrypick_files(where, pat, rel_num_dict[fault_name])
-        assert found, "---   FAILED !!!!!!!"
-        print("---   Passed")
+        if found:
+            print("---   Passed")
+            for f in files:
+                files_dict[fault_name][data_type][str(f)]=f.stat().st_size
 
-        for f in files:
-           files_dict[fault_name][data_type][str(f)]=f.stat().st_size
-#        print(files)
+        else:
+            print(f"---   FAILED: {fault_name} {data_type} found {len(files)} !!!!!!!")
+           #        print(files)
 
+        stocktake_df[col_num].loc[fault_name]=len(files)
+        stocktake_df[col_ok].loc[fault_name]=found
 
 
 if __name__ == "__main__":
+
+    global config, rel_num_dict, files_dict, stocktake_df
+
+
     args = load_args()
 
     cs_root = args.cs_root
     fault_list = args.fault_list
     out_file = args.out_file
     data_types = args.data_types
+    config = args.config
+    stocktake_csv = args.stocktake_csv
 
     assert cs_root.exists()
     assert fault_list.exists()
 
-    global config, rel_num_dict, files_dict
 
+    if "Source" in data_types:
+        data_types.append("VM") #if Source is in, add VM too
 
+    print(data_types)
+
+    
 
     rel_num_dict={}
     with open(fault_list,"r") as f:
@@ -100,9 +124,23 @@ if __name__ == "__main__":
             fault_name, num_rels = line.split()
             rel_num_dict[fault_name]=int(num_rels.split("r")[0])
 
-    with open(CONFIG,'r') as f:
+    assert config.exists()
+
+    with open(config,'r') as f:
         config=yaml.safe_load(f)
     
+    stocktake_df = pd.DataFrame(list(rel_num_dict.values()), index=list(rel_num_dict.keys()), columns=['rel_nums'])
+
+    for data_type in data_types:    
+        for pat in config[data_type]['pattern']:
+            wpat=pat.format(fault_name="*")
+            col_num = f"num({data_type}_{wpat})"
+            col_ok = f"OK({data_type}_{wpat})"
+
+            stocktake_df[col_num]=0
+            stocktake_df[col_ok]=False
+
+
     files_dict={} 
     for fault_name in list(rel_num_dict.keys()):
         print(f"{fault_name}")
@@ -114,4 +152,6 @@ if __name__ == "__main__":
     with open(out_file,"w") as f:
         yaml.dump(files_dict,f)
 
-    print(f"======== Completed. List of files to sync is written to {out_file}")
+    stocktake_df.to_csv(stocktake_csv)
+    print(f"======== Completed. List of files to sync is written to {out_file} and {stocktake_csv}")
+

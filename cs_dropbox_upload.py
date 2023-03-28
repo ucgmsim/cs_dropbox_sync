@@ -25,12 +25,12 @@ def load_args():
     parser.add_argument(
         "files_to_sync",type=Path, help="YAML file keeping the list of files to sync", default=Path.cwd()/FILES_TO_SYNC)
     parser.add_argument(
-        "tmp_dir",type=Path, help="Temp directory where files to be copied to and uploaded from", default="/tmp")
-    parser.add_argument(
-        "--nproc",type=int, help="Number of concurrent processes", default=2)
+        "--tmp_dir",type=Path, help="Temp directory where files to be copied to and uploaded from", default=Path.cwd()/"tmp")
 
     parser.add_argument(
         '-t', "--data_types", help="Data types to download. Gets all BB, IM, Source if not specified",action='append', choices=DATA_TYPES, default=[])
+    parser.add_argument(
+        '-f', "--overwrite", action="store_true", help="Force uploading even if it has been previously uploaded")
 
 
     args = parser.parse_args()
@@ -39,11 +39,40 @@ def load_args():
 
     return args
 
+def retrieve_dropbox_files(dropbox_link, check_tar=False):
+    # check_tar = True enforces collection of "desirable" TAR files only
+
+    files_found = []
+    cmd=f"rclone ls {dropbox_link}"
+    print(f"#### Files in {dropbox_link}")
+    p=subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    out,err=p.communicate()
+    lines=out.decode('utf-8').split("\n")
+    for line in lines:
+        try:
+            _, filepath = line.split() # returns size, filepath
+        except ValueError:
+            continue
+        filename = Path(filepath).name # just focus on the file name
+        if check_tar:
+            try:
+                chunks = filename.split(".tar")[0].split("_") # eg. FiordSZ03_BB.tar, FiordSZ03_BB_1.tar
+            except ValueError:
+                continue
+            if len(chunks) >1: # should be either 2 or 3
+                pass
+            else: # not a file we are after, skip
+                continue
+        print(f" --{filename}")
+        files_found.append(filename)
+
+    return files_found
+
 def copy_files(fault_name, data_type, work_dir):
     all_good=True
 
     # chery_pick files and copy to work directory
-    print(f"#### Copy {fault_name} {data_type} files to {work_dir}")
+    print(f"#### Copy {fault_name} {data_type} files to {work_dir.relative_to(Path.cwd())}")
     files_to_copy = files_dict[fault_name][data_type].keys()
     work_dir.mkdir(parents=True, exist_ok=True)
     for f in files_to_copy:
@@ -74,9 +103,41 @@ def copy_files(fault_name, data_type, work_dir):
 
     return all_good
 
+class TARGroup:
+    # Used to handle a group of TAR files when files to be archived are need to be partitioned due to upload size limit
+    # If a tar file, such as AlpineK2T_BB.tar is going to be larger than size limit (100Gb currently), we will partition files 
+    # such that the resulting tar files below the size limit.
+    # As a result, we have AlpineK2T_BB_0.tar, AlpineK2T_BB_2.tar ..., with the last one ending with "f", such as AlpineK2T_BB_3f.tar
+    # This way, we know we have a complete set of TAR files if we find all 0, 1 ..3 labeled files with the AlpineK2T_BB prefix.
+
+    def __init__(self):
+        self.found_partitions=[]
+        self.size = None # number of partitions, initially unknown
+
+    def get_size(self):
+        return self.size
+
+    def is_size_known(self):
+        return self.size is not None
+    
+    def found(self, num):
+        if num.endswith("f"): #The last partition ends with "f"
+            num=int(num.strip("f"))
+            self.size = num+1
+        else:
+            num=int(num)
+
+        self.found_partitions.append(num)
+
+    def all_found(self):
+        return self.size == len(self.found_partitions)
+        
+
 def __make_partition(all_files):
     partition_list=[]
+    assert len(all_files) > 0, "Files are empty. Use -t argument (eg. -t BB) if you wish to upload without this data type "
     one_partition=[all_files[0]]
+        
     partition_size = all_files[0].stat().st_size
 
     for f in all_files[1:]:
@@ -140,46 +201,17 @@ def pack(fault_name, data_type):
         #we are going into work_dir, tar file will be in its parent (ie. ../work_dir)
         
         files_str=" ".join([str(f.relative_to(work_dir)) for f in one_partition])
-        print(f"#### Making {tar_files[i]}")
+        print(f"#### Making {tar_files[i].relative_to(Path.cwd())}")
         # make tar file - not using tarfile package to avoid full-path when extracted
         cmd = f"tar cvf {tar_files[i]} {files_str}"
         print(cmd)
         p=subprocess.Popen(cmd,cwd=str(work_dir),shell=True, stdin=subprocess.PIPE,stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         out, err=p.communicate()
-        print(out)
-        print(err)
+#        print(out)
+        print(err.decode('utf-8'))
     
     return all_good # Limitation: file copy was good - we assume TAR was succcessful.
 
-
-:102,152s/partition_list/tar_group/g
-def retrieve_dropbox_files(dropbox_link, check_tar=False):
-    # check_tar = True enforces collection of "desirable" TAR files only
-
-    files_found = []
-    cmd=f"rclone ls {dropbox_link}"
-    p=subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    out,err=p.communicate()
-    lines=out.decode('utf-8').split("\n")
-    for line in lines:
-        try:
-            _, filepath = line.split() # returns size, filepath
-        except ValueError:
-            continue
-        filename = Path(filepath).name # just focus on the file name
-        if check_tar:
-            try:
-                chunks = filename.split(".tar")[0].split("_") # eg. FiordSZ03_BB.tar, FiordSZ03_BB_1.tar
-            except ValueError:
-                continue
-            if len(chunks) >1: # should be either 2 or 3
-                pass
-            else: # not a file we are after, skip
-                continue
-        print(filename)
-        files_found.append(filename)
-
-    return files_found
  
 def upload(fault_name): # Just upload everything from this fault_name's to_upload directory. 
     # rclone uploads multiple files from the directory in parallel, maximising upload traffic
@@ -200,11 +232,12 @@ def upload(fault_name): # Just upload everything from this fault_name's to_uploa
     # 4. {src} is a directory, {dest} is a file, error.
 
     logfile = to_upload_root/f"{fault_name}_progress.log"
-    print(f"#### Uploading {to_upload_dir} to {dropbox_dir}. Check progress with tail -f {str(logfile)}")
+    print(f"#### Uploading {to_upload_dir.relative_to(Path.cwd())} to {dropbox_dir}.")
+    print(f"\n\n --------   Check progress with     tail -f {str(logfile)}\n\n")
     with open(logfile,"w") as f:
         p=subprocess.Popen(f"rclone --progress copy {to_upload_dir} {dropbox_dir}",shell=True,stdout=f, stderr=f)
         p.communicate()
-        print(f"#### Uploading {to_upload_dir} completed")
+        print(f"#### Uploading {to_upload_dir.relative_to(Path.cwd())} completed")
 
     tar_files_found = retrieve_dropbox_files(dropbox_dir, check_tar=True)
 
@@ -213,29 +246,6 @@ def upload(fault_name): # Just upload everything from this fault_name's to_uploa
 
     return upload_num_mathces, tar_files_found
 
-class TARGroup:
-    def __init__(self):
-        self.found_partitions=[]
-        self.size = None
-
-    def get_size(self):
-        return self.size
-
-    def is_size_known(self):
-        return self.size is not None
-    
-    def found(self, num):
-        if num.endswith("f"): #last num
-            num=int(num.strip("f"))
-            self.size = num+1
-        else:
-            num=int(num)
-
-        self.found_partitions.append(num)
-
-    def all_found(self):
-        return self.size == len(self.found_partitions)
-        
 
 def mark_uploaded(fault_name,data_type):
     if data_type == []:
@@ -243,9 +253,9 @@ def mark_uploaded(fault_name,data_type):
     else:
         if data_type not in uploaded[fault_name]:
             uploaded[fault_name].append(data_type)
-    print(f"write to {work_root}/{fault_name}_{UPLOAD_REPORT}")
+    report_path = work_root/f"{fault_name}_{UPLOAD_REPORT}"
 
-    with open(work_root/f"{fault_name}_{UPLOAD_REPORT}","w") as f:
+    with open(report_path,"w") as f:
         yaml.dump(uploaded[fault_name],f)
 
 def update_uploaded_status(tar_files):
@@ -272,36 +282,36 @@ def update_uploaded_status(tar_files):
                 mark_uploaded(fault_name,data_type)
 
             else: # tar group is considered fully uploaded if below satisfies
-                print(f"{fault_name} {data_type} has tar_group")
+#                print(f"{fault_name} {data_type} has tar_group")
                 if (fault_name, data_type) not in tar_group:
                     # this is an unknown tar group. Create one and start tracking
                     tar_group[(fault_name,data_type)]=TARGroup()
                 this_tar_group = tar_group[(fault_name,data_type)] # retrieve a relevant tar group
                 this_tar_group.found(num) # report "num"-th partition has been found
                 if this_tar_group.all_found():
-                    print(f"{fault_name} {data_type} uploaded all partitions")
+                    print(f"{fault_name} {data_type} all partitions confirmed uploaded")
                     mark_uploaded(fault_name,data_type)
 
 
 if __name__ == "__main__":
     args = load_args()
 
-    global cs_root,work_root, to_pack_root, to_upload_root, dropbox_path,fpconf,files_to_sync, uploaded, data_types
+    global cs_root,work_root, to_pack_root, to_upload_root, dropbox_path,fpconf, files_to_sync, uploaded, data_types
 
 
-    cs_root = args.cs_root
-    files_to_sync = args.files_to_sync
-    tmp_dir = args.tmp_dir
+    cs_root = args.cs_root.resolve()
+    files_to_sync = args.files_to_sync.resolve()
+    tmp_dir = args.tmp_dir.resolve()
     data_types = args.data_types
+    overwrite = args.overwrite
 
-    nproc = args.nproc
 
     assert cs_root.exists()
     assert files_to_sync.exists()
     
     tmp_dir.mkdir(exist_ok=True, parents=True)
 
-    cs_ver = cs_root.resolve().name
+    cs_ver = cs_root.name
 
     work_root = tmp_dir/f"{cs_ver}"
     to_pack_root = work_root / "to_pack"
@@ -329,8 +339,7 @@ if __name__ == "__main__":
     for fault_name in fault_names:
         mark_uploaded(fault_name,[])
    
-    tar_files = retrieve_dropbox_files(dropbox_path)
-    print(tar_files)
+    tar_files = retrieve_dropbox_files(dropbox_path) # may contain non-tar files or tar files not in the desired format. Will be filtered out.
     update_uploaded_status(tar_files)
 
 
@@ -338,17 +347,23 @@ if __name__ == "__main__":
     print(uploaded)
 
     for fault_name in fault_names:
+        print("\n\n-------------------------------")
+        print(f"        {fault_name}")
+        print("\n-------------------------------\n\n")
 
         # packing all data_types
         pack_ok={}.fromkeys(data_types)
         to_upload_dir = to_upload_root / fault_name
         if to_upload_dir.exists():
-            print(f"#### {to_upload_dir} already exists. Delete")
+            print(f"#### Info: {to_upload_dir.relative_to(Path.cwd())} already exists. Delete")
             shutil.rmtree(to_upload_dir)
 
         to_upload_dir.mkdir(parents=True,exist_ok=True)
         for data_type in data_types:
-            if data_type not in uploaded[fault_name]:
+            if overwrite or (data_type not in uploaded[fault_name]): # skip already uploaded file unless overwrite enforced
+                if overwrite and data_type in uploaded[fault_name]:
+                    print(f"#### Warning: Existing {fault_name} {data_type} will be overwritten")
+                    
                 pack_ok[data_type]=pack(fault_name, data_type)
                 if not pack_ok[data_type]:
                     print(f"#### {fault_name} {data_type} packing failed - Upload skipped")

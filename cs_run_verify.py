@@ -132,7 +132,7 @@ if __name__ == "__main__":
     
     stocktake_df = pd.DataFrame(list(rel_num_dict.values()), index=list(rel_num_dict.keys()), columns=['rel_nums'])
 
-    for data_type in data_types:    
+    for data_type in DATA_TYPES: #stoktake CSV file is made for ALL data_types and patterns
         for pat in config[data_type]['pattern']:
             wpat=pat.format(fault_name="*")
             col_num = f"num({data_type}_{wpat})"
@@ -160,5 +160,7 @@ if __name__ == "__main__":
     with open(out_file,"w") as f:
         yaml.dump(files_dict,f)
 
-    print(f"======== Completed. List of files to sync is written to {out_file} and {stocktake_csv}")
+    print(f"======== Completed: Output files produced"
+    print(f"      - {out_file}")
+    print(f"      - {stocktake_csv}")
 

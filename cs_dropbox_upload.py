@@ -39,6 +39,11 @@ def load_args():
 
     return args
 
+def check_rclone():
+    p=subprocess.Popen("which rclone", shell=True,stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    out, err = p.communicate()
+    assert len(err.decode("utf-8"))==0, "rclone is not found"
+        
 def retrieve_dropbox_files(dropbox_link, check_tar=False):
     # check_tar = True enforces collection of "desirable" TAR files only
 
@@ -308,6 +313,8 @@ if __name__ == "__main__":
 
     assert cs_root.exists()
     assert files_to_sync.exists()
+
+    check_rclone()
     
     tmp_dir.mkdir(exist_ok=True, parents=True)
 

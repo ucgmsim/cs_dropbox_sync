@@ -49,7 +49,7 @@ def cherrypick_files(where, pattern, num):
 
     if "*" in pattern: #looking for multiple
         result=list(where.glob(pattern))
-        print(result)
+#        print(result)
         print(f"---   multiple expected: {num}")
         if optional:
             if len(result) > 0: #ok, now this MUST match num (ie. no longer optional)
@@ -156,11 +156,11 @@ if __name__ == "__main__":
     files_dict["."][str(fault_list)]= fault_list.stat().st_size
     files_dict["."][str(stocktake_csv)] = stocktake_csv.stat().st_size
 
-    print(files_dict)
+#    print(files_dict)
     with open(out_file,"w") as f:
         yaml.dump(files_dict,f)
 
-    print(f"======== Completed: Output files produced"
+    print(f"======== Completed: Output files produced")
     print(f"      - {out_file}")
     print(f"      - {stocktake_csv}")
 

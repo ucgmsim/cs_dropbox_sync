@@ -140,7 +140,10 @@ class TARGroup:
 
 def __make_partition(all_files):
     partition_list=[]
-    assert len(all_files) > 0, "Files are empty. Use -t argument (eg. -t BB) if you wish to upload without this data type "
+    if len(all_files) == 0:
+        print(f" WARNING: Files are empty. Consider -t argument (eg. -t BB) if you wish to upload without this data type")
+        return [[]] # retur
+
     one_partition=[all_files[0]]
         
     partition_size = all_files[0].stat().st_size
@@ -208,13 +211,14 @@ def pack(fault_name, data_type):
         files_str=" ".join([str(f.relative_to(work_dir)) for f in one_partition])
         print(f"#### Making {tar_files[i].relative_to(Path.cwd())}")
         # make tar file - not using tarfile package to avoid full-path when extracted
-        cmd = f"tar cvf {tar_files[i]} {files_str}"
+        cmd = f"tar cvf {tar_files[i]} {files_str} --remove-files"
         print(cmd)
         p=subprocess.Popen(cmd,cwd=str(work_dir),shell=True, stdin=subprocess.PIPE,stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         out, err=p.communicate()
 #        print(out)
-        print(err.decode('utf-8'))
-    
+        err=err.decode('utf-8')
+        print(err)
+
     return all_good # Limitation: file copy was good - we assume TAR was succcessful.
 
  
@@ -248,6 +252,8 @@ def upload(fault_name): # Just upload everything from this fault_name's to_uploa
 
     if len(set(tar_files_to_upload) - set(tar_files_found)) > 0:
         upload_num_mathces = False
+
+    # TODO: Delete TAR files after upload is completed
 
     return upload_num_mathces, tar_files_found
 

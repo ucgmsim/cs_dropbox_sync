@@ -232,7 +232,7 @@ def upload(fault_name): # Just upload everything from this fault_name's to_uploa
     to_upload_dir = to_upload_root/fault_name
     tar_files_to_upload = [tf.name for tf in list(to_upload_dir.glob(tar_file))]
 
-    upload_num_mathces = True
+    upload_num_matches = True
    
     # rclone copy {src} dropbox:{dest}
     # 1. {src} is a file, and {dest} is a file, trivial
@@ -251,11 +251,15 @@ def upload(fault_name): # Just upload everything from this fault_name's to_uploa
     tar_files_found = retrieve_dropbox_files(dropbox_dir, check_tar=True)
 
     if len(set(tar_files_to_upload) - set(tar_files_found)) > 0:
-        upload_num_mathces = False
+        upload_num_matches = False
 
     # TODO: Delete TAR files after upload is completed
 
-    return upload_num_mathces, tar_files_found
+    if upload_num_matches:
+        print(f"#### Upload done - deleting tmp dir {to_upload_dir.relative_to(Path.cwd())}")
+        shutil.rmtree(to_upload_dir)
+
+    return upload_num_matches, tar_files_found
 
 
 def mark_uploaded(fault_name,data_type):

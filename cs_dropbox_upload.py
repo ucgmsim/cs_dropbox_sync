@@ -241,11 +241,12 @@ def pack(fault_name, data_type):
             tf.unlink()
 
     for i, one_partition in enumerate(partition_list):
-        # we are going into work_dir, tar file will be in its parent (ie. ../work_dir)
 
         files_str = " ".join([str(f.relative_to(work_dir)) for f in one_partition])
         print(f"#### Making {tar_files[i].relative_to(Path.cwd())}")
-        # make tar file - not using tarfile package to avoid full-path when extracted
+        # make tar file 
+        # We are not using python 'tarfile' package due to limitations
+        # We are going into work_dir, so that files to add to tar file will have their basenames when untarred.
         cmd = f"tar cvf {tar_files[i]} {files_str}"
         print(cmd)
         p = subprocess.Popen(
@@ -267,7 +268,7 @@ def pack(fault_name, data_type):
         (
             err,
             _,
-        ) = p.communicate()  # if all good, no output. the error message goes to stdout
+        ) = p.communicate()  # this command sends the error message to stdout.
         err = err.decode("utf-8")
         assert (
             len(err) == 0
@@ -283,8 +284,8 @@ def pack(fault_name, data_type):
         )
         p.communicate()  # no output expected
 
-    return all_good  # Limitation: file copy was good - we assume TAR was succcessful.
-
+    #TODO: We may need to re-think "all_good". if True, only means file copy was good - as we abort if tar failed.
+    return all_good 
 
 def upload(
     fault_name,
@@ -300,7 +301,6 @@ def upload(
     to_upload_dir = to_upload_root / fault_name
     tar_files_to_upload = [tf.name for tf in list(to_upload_dir.glob(tar_file))]
 
-    upload_num_matches = True
 
     # rclone copy {src} dropbox:{dest}
     # 1. {src} is a file, and {dest} is a file, trivial
@@ -337,7 +337,7 @@ def upload(
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
-    _, out = p.communicate()  # all output goes to stderr
+    _, err = p.communicate()  # this command sends all output good or bad to stderr
 
     with open(check_file, "r") as f:
         diff_result = f.read()
@@ -351,7 +351,7 @@ def upload(
         shutil.rmtree(to_upload_dir)
     else:
         print(f"#### ERROR: Upload failed")
-        print(out.decode("utf-8"))
+        print(err.decode("utf-8"))
 
     return upload_success, tar_files_found
 

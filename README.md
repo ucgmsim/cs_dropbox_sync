@@ -280,9 +280,10 @@ Elapsed time:       2m5.0s
 
 
 # File integrity and verification
-The integrity of individual file is *NOT* tested by this code. However, we considered the following steps to make sure the files don't get corrupted.
-1. Check if everything is in place. Done by `cs_dropbox_preprocess.py`. 
-2. Check if the copied version is identical to the original before making a TAR ball : Done by `cs_dropbox_upload.py`. The files_to_sync.yaml contains the file size info. If both files have the same file size, we consider they are identical. (Checksum is an overkill for local file copy)
-3. We assume making a TAR file is error-free.
-4. Dropbox upload: rclone upload is known to do the checksum test, and the file upload is *atomic*, meaning it is all or nothing. If it is found on Dropbox, it is guaranteed to be identical to the original. (TODO: citation needed) (Edit: for explicit check, see https://rclone.org/commands/rclone_check/ )
+We assume files to be archived are good, and don't check the integrity of individual file, which is beyond the scope of this code. 
+However, we consider the following steps to ensure files are correctly packaged and archived on Dropbox.
+1. Check if everything is in place. Done by `cs_dropbox_preprocess.py`. It generates `stocktake.csv` to review what is included and what is missing.
+2. Check if the copied version is identical to the original before making a TAR file : Done by `cs_dropbox_upload.py`. The files_to_sync.yaml contains the file size info. If both files have the same file size, we consider they are identical. (Checksum is an overkill for local file copy)
+3. After a TAR file is created, files contained are compared against the original, and aborts if there are issues (eg. file storage going low, producing incomplete TAR file)
+4. Dropbox upload: rclone copy automatically checks the size and mod time, which is believed to be sufficient to (full scale checksum is slow). Also rclone discards the copy if the file is half-finished or tampered. If "rclone ls" returns the file from Dropbox, it is *almost* guaranteed to be the exact copy (See https://forum.rclone.org/t/rclone-copy-files-and-checksum/14895/2). Having said that, a "rclone check" step is explicitly executed for extra safety (See https://rclone.org/commands/rclone_check/ )
 

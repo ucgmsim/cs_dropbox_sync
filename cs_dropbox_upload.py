@@ -51,6 +51,14 @@ def load_args():
         help="Force uploading even if it has been previously uploaded",
     )
 
+    parser.add_argument(
+        "--no_checksum",
+        action="storek_false",
+        dest="do_checksum",
+        help="Skip rclone check after uploading"
+    )
+
+
     args = parser.parse_args()
     if args.data_types == []:
         args.data_types = DATA_TYPES
@@ -289,6 +297,7 @@ def pack(fault_name, data_type):
 
 def upload(
     fault_name,
+    do_checksum,
 ):  # Just upload everything from this fault_name's to_upload directory.
     # rclone uploads multiple files from the directory in parallel, maximising upload traffic
     dropbox_dir = f"{dropbox_path}/{fault_name}"
@@ -314,7 +323,7 @@ def upload(
     print(f"#### Uploading {to_upload_dir.relative_to(Path.cwd())} to {dropbox_dir}.")
     print(f"\n\n --------   Check progress with     tail -f {str(progress_file)}\n\n")
     with open(progress_file, "w") as f:
-        # can use --checksum, but automatic size, modtime check is considered adequate.
+        # can use rclone copy --checksum, but automatic size, modtime check is considered adequate.
         # https://forum.rclone.org/t/rclone-copy-files-and-checksum/14895/2 .
         # Besides, error (if any) collection via --checksum is not simple.
         # We will be using a separate rclone check below
@@ -330,19 +339,24 @@ def upload(
     tar_files_found = retrieve_dropbox_files(dropbox_dir, check_tar=True)
 
     # Extra verification. Checks one-way only. ie. source files must exist on remote
-    # and difference (if any) is logged in check_file. This may be slow. Could consider switching on/off with an argument
-    p = subprocess.Popen(
-        f"rclone check {to_upload_dir} {dropbox_dir} --one-way --differ {check_file}",
-        shell=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
-    _, err = p.communicate()  # this command sends all output good or bad to stderr
+    # and difference (if any) is logged in check_file. Use --no_checksum argument if too slow
+    if do_checksum:
+        p = subprocess.Popen(
+            f"rclone check {to_upload_dir} {dropbox_dir} --one-way --differ {check_file}",
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        _, err = p.communicate()  # this command sends all output good or bad to stderr
 
-    with open(check_file, "r") as f:
-        diff_result = f.read()
+        with open(check_file, "r") as f:
+            diff_result = f.read()
 
-    upload_success = len(diff_result) == 0
+        upload_success = len(diff_result) == 0
+    else:
+        #just check if the files are found in Dropbox. Might be adequate
+        tar_files_found = retrieve_dropbox_files(dropbox_dir, check_tar=True)
+        upload_success = len(set(tar_files_to_upload) - set(tar_files_found)) == 0
 
     if upload_success:
         print(
@@ -415,6 +429,7 @@ if __name__ == "__main__":
     tmp_dir = args.tmp_dir.resolve()
     data_types = args.data_types
     overwrite = args.overwrite
+    do_checksum = args.do_checksum 
 
     assert cs_root.exists()
     assert files_to_sync.exists()
@@ -496,7 +511,7 @@ if __name__ == "__main__":
 
         # if any TAR files have been produced for upload, go ahead
         if any(pack_ok.values()):
-            upload_ok, tar_files_uploaded = upload(fault_name)
+            upload_ok, tar_files_uploaded = upload(fault_name, do_checksum)
             assert upload_ok, "!!!! CRITICAL: Upload failed for {fault_name}"
 
             update_uploaded_status(tar_files_uploaded)

@@ -53,7 +53,7 @@ def load_args():
 
     parser.add_argument(
         "--no_checksum",
-        action="storek_false",
+        action="store_false",
         dest="do_checksum",
         help="Skip rclone check after uploading"
     )

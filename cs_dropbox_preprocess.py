@@ -64,7 +64,7 @@ def cherrypick_files(where, pattern, num):
         pattern = pattern.strip(OPTIONAL_PATTERN_MARKER)
         optional = True
 
-    if "*" in pattern:  # looking for multiple
+    if "?" in pattern or "*" in pattern:  # looking for multiple
         result = list(where.glob(pattern))
         #        print(result)
         print(f"---   multiple expected: {num}")
@@ -126,6 +126,7 @@ if __name__ == "__main__":
 
     if "Source" in data_types:
         data_types.append("VM")  # if Source is in, add VM too
+        DATA_TYPES.append("VM")
 
     print(data_types)
 

@@ -17,12 +17,12 @@ Source:
 # New CS runs
 #  - "Srf/{fault_name}.info"
 #  - "Srf/{fault_name}.csv"
-    - "Srf/*REL*.info"
-    - "Srf/*REL*.csv"
+    - "Srf/{fault_name}_REL??.info"
+    - "Srf/{fault_name}_REL??.csv"
 
 VM:
   where: "Data/VMs/{fault_name}"
   pattern:
       - "vm_params.yaml"
       - "nzvm.cfg"
-      - "$*.pertb.csv"
+      - "${fault_name}_REL??.pertb.csv"

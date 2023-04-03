@@ -38,6 +38,7 @@ def load_args():
     if args.download_dir == "":
         args.download_dir = Path.cwd()
 
+
     return args
 
 
@@ -51,7 +52,7 @@ if __name__ == "__main__":
 
     print(args.data_types)
 
-    dropbox_path = f"dropbox:/Cybershake/{dropbox_cs_ver}"
+    dropbox_path = f"dropbox:Cybershake/{dropbox_cs_ver}"
 
     p = subprocess.Popen(
         f"rclone ls {dropbox_path}",
@@ -65,49 +66,47 @@ if __name__ == "__main__":
 
     assert "ERROR" not in err, f"CS version not found: {dropbox_cs_ver}"
 
+    download_root.mkdir(exist_ok=True,parents=True)
     assert os.access(download_root, os.X_OK | os.W_OK)
 
-    lines = out.split("\n")
-    to_download = []
-    for line in lines:
-        try:
-            size, filepath = line.split()
-        except ValueError:
-            continue
-        fault_name, tar_file = filepath.split("/")
-        try:
-            data_type = tar_file.split(".tar")[0].split("_")[-1]
-        except ValueError:
-            continue
-        if data_type not in data_types:
-            continue
-        else:
-            # filepath, fault_name, tar_file, data_type all good
-            if data_type in args.data_types:
-                to_download.append((filepath, fault_name, data_type))
 
-    print(f"## Download starting")
 
-    #    for (filepath, fault_name, data_type) in to_download:
-    #
-    #        download_dir = download_root/fault_name/data_type
-    #        download_dir.mkdir(parents=True, exist_ok=True)
-    #        logfile = download_root/f"{Path(filepath).name}.log"
-    #        print(f"### Downloading {filepath} to {download_dir}. Check progress with tail -f {logfile}")
-    #        with open(logfile,"w") as f:
-    #            p=subprocess.Popen(f"rclone copy {dropbox_path}/{filepath} {download_dir} --progress", shell=True, stdout=f, stderr=f)
-    #            p.communicate()
-    #        print(f"### Downloading {filepath} completed")
+    include_txt = ""
+    for data_type in data_types:
+        include_txt += f" --include *_{data_type}.tar"
+    logfile = download_root/f"{dropbox_cs_ver}.log"
+    print(f"## Downloading {dropbox_path} to {download_root}. Check progress with tail -f {logfile}")
+    cmd = f"rclone copy {dropbox_path} {download_root} {include_txt} --progress"
+    print(cmd)
+    with open(logfile, "w") as f:
+        p=subprocess.Popen(cmd, shell=True, stdout=f, stderr=f)
+        out, err= p.communicate()
+    print(f"## Downloading {dropbox_path} completed")
+    print(out)
+    print(err)
 
-    print(f"## All Download is completed")
 
     print(f"## Extracting TAR files")
-    tarfiles = list(download_root.glob("*/*/*.tar"))
+    tarfiles = list(download_root.glob("*/*.tar"))
     print(tarfiles)
-    for t in tarfiles[:1]:
+    for t in tarfiles:
         print(f"### Extracting {t}")
         tar = tarfile.open(t, "r")
-        tar.extractall(path=t.parent)
+        fault_dir=t.parent
+        chunks = t.name.split(".tar")[0].split("_")
+        if len(chunks) == 2: # single tar file
+            fault_name, data_type = chunks
+            num = None
+        elif len(chunks) ==3: #tar group
+            fault_name, data_type, num = chunks
+        else:
+            continue
+        if data_type not in DATA_TYPES:
+            continue
+
+        untar_dir=fault_dir/data_type
+        untar_dir.mkdir(exist_ok=True,parents=True)
+        tar.extractall(path=untar_dir)
         if cleanup:
             print(f" ### Deleting {t}")
             os.remove(t)

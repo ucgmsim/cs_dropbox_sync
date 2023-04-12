@@ -64,15 +64,19 @@ def cherrypick_files(where, pattern, num):
         pattern = pattern.strip(OPTIONAL_PATTERN_MARKER)
         optional = True
 
-    if "?" in pattern or "*" in pattern:  # looking for multiple
+    if "*" in pattern or "?" in pattern:  # looking for multiple
         result = list(where.glob(pattern))
         #        print(result)
-        print(f"---   multiple expected: {num}")
         if optional:
             if len(result) > 0:  # ok, now this MUST match num (ie. no longer optional)
                 print(f"---   Now, must find {num}")
                 optional = False
-        found = not optional and len(result) == num
+            else:
+                print(f"---   OK if not found")
+                num = 0
+        else:
+            print(f"---   multiple expected: {num}")
+        found = len(result) == num
         return found, result
     else:  # single match
         found = Path(where / pattern).exists()

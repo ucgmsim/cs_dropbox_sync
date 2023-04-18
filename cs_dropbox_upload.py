@@ -397,6 +397,8 @@ def update_uploaded_status(tar_files):
         else:
             # this is not in the format we want, pass
             continue
+        if fault_name not in fault_names:
+            continue # unknown fault_name
         if data_type not in DATA_TYPES:
             continue  # unknown type
         else:
@@ -422,7 +424,8 @@ def update_uploaded_status(tar_files):
 if __name__ == "__main__":
     args = load_args()
 
-    global cs_root, work_root, to_pack_root, to_upload_root, dropbox_path, fpconf, files_to_sync, uploaded, data_types
+    global cs_root, work_root, to_pack_root, to_upload_root, dropbox_path, fpconf, files_to_sync, uploaded, data_types, fault_names
+
 
     cs_root = args.cs_root.resolve()
     files_to_sync = args.files_to_sync.resolve()

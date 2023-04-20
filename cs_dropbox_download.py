@@ -12,6 +12,7 @@ import tarfile
 DATA_TYPES = ["Source", "IM", "BB"]
 
 TAR_ERROR_LOG = "tar_error.log"
+TAR_OK_LOG = "tar_ok.log"
 
 def load_args():
     parser = argparse.ArgumentParser()
@@ -36,10 +37,22 @@ def load_args():
 
     parser.add_argument(
         "--no_download", help="If download has been already done, and wish to untar only", action="store_false", dest="ok_download")
+    
     parser.add_argument(
-        "--skip_fault", help="Skip processing this fault",
+        "--inc_fault", help="Include this fault. All if unspecified.",
         action="append",
         default=[],
+    )
+    parser.add_argument(
+        "--exc_fault",help="Exclude this fault. The fault is excluded if both inc_fault exc_fault are specified",
+        action="append",
+        default=[],
+    )
+
+    parser.add_argument(
+        "--force_untar",
+        help="Force untar from scratch",
+        action="store_true"
     )
 
     args = parser.parse_args()
@@ -63,12 +76,10 @@ if __name__ == "__main__":
 
     print(args.data_types)
 
-    # TODO: check rclone
-
     dropbox_path = f"dropbox:Cybershake/{dropbox_cs_ver}"
 
     p = subprocess.Popen(
-        f"rclone ls {dropbox_path}",
+        f"rclone lsd {dropbox_path}",
         shell=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -79,14 +90,47 @@ if __name__ == "__main__":
 
     assert "ERROR" not in err, f"CS version not found: {dropbox_cs_ver}"
 
+    fault_names=[x.split(" ")[-1] for x in out.split("\n") if len(x)>0]
+    fault_names=[x for x in fault_names if not x.startswith("_")] #skip if the folder name starts with _
+
+    if len(args.inc_fault) == 0:
+        args.inc_fault = fault_names
+        
+
     download_root.mkdir(exist_ok=True,parents=True)
     assert os.access(download_root, os.X_OK | os.W_OK)
+
+    tar_error_log = download_root / TAR_ERROR_LOG
+    tar_ok_log = download_root / TAR_OK_LOG
+
+
+    if args.force_untar: # enforce untar from scratch
+        tar_ok_log.unlink(missing_ok=True) # delete the ok log
+        tar_error_log.unlink(missing_ok=True) # delete the error log
+
+            
+    log_ok_list = []
+    fault_to_skip_download = []
+    if tar_ok_log.exists():
+        with open(tar_ok_log, "r") as f:
+            log_ok_list = f.read().split("\n")
+        log_ok_list = [x for x in log_ok_list if len(x)>0]
+
+    log_error_list = []
+    if tar_error_log.exists():
+        with open(tar_error_log, "r") as f:
+            log_error_list = f.read().split("\n")
+        log_error_list = [x for x in log_error_list if len(x)>0] 
+
+    # final list of faults to download.
+    faults_to_include = list(set(args.inc_fault) - set(args.exc_fault))
 
 
     if args.ok_download:
         include_txt = ""
-        for data_type in data_types:
-            include_txt += f" --include *_{data_type}.tar"
+        for fault_name in faults_to_include: # previously downloaded tar,if still present, will be skipped
+            for data_type in data_types:
+                include_txt += f' --filter "+ {fault_name}_{data_type}*.tar"'
         logfile = download_root/f"{dropbox_cs_ver}.log"
         print(f"## Downloading {dropbox_path} to {download_root}. Check progress with tail -f {logfile}")
         cmd = f"rclone copy {dropbox_path} {download_root} {include_txt} --progress"
@@ -101,23 +145,21 @@ if __name__ == "__main__":
     else:
         print(f"## Skipping download")
 
-    error_log = download_root / TAR_ERROR_LOG
-    error_lst = []
-    if error_log.exists():
-        with open(error_log, "r") as f:
-            error_list = f.read().split("\n")
-        error_list = [x for x in error_list if len(x)>0] 
-    
+
+   
     print(f"## Extracting TAR files")
     print(download_root)
-    tarfiles = list(download_root.glob("*/*.tar"))
+    tarfiles = list(download_root.glob("*/*.tar")) # there may be old tar files
+    tarfiles=sorted(tarfiles)
     print(tarfiles)
     for t in tarfiles:
-
-        if t.name in error_list:
+        if t.name in log_ok_list: # skip if old ones
+            print(f"### Skip {t} as previously handled successfully")
+            continue
+        if t.name in log_error_list:
             print(f"### !!! Skip {t} is known to be broken")
             continue
-
+    
         print(f"### Extracting {t}")
         tar = tarfile.open(t, "r")
         fault_dir=t.parent
@@ -132,7 +174,7 @@ if __name__ == "__main__":
         if data_type not in data_types:
             continue
 
-        if fault_name in args.skip_fault:
+        if fault_name in args.exc_fault:
             print(f"### !!! Skip {fault_name} as specified")
             continue
 
@@ -142,9 +184,12 @@ if __name__ == "__main__":
             tar.extractall(path=untar_dir)
         except EOFError:
             print(f"### CRITICAL {t} is broken")
-            with open(error_log, "a") as f:
+            with open(tar_error_log, "a") as f:
                 f.write(f"{t.name}\n")
             continue
+        else: #all good
+            with open(tar_ok_log,"a") as f:
+                f.write(f"{t.name}\n")
         if cleanup:
             print(f" ### Deleting {t}")
             os.remove(t)

@@ -130,7 +130,7 @@ if __name__ == "__main__":
         include_txt = ""
         for fault_name in faults_to_include: # previously downloaded tar,if still present, will be skipped
             for data_type in data_types:
-                include_txt += f' --filter "+ {fault_name}_{data_type}*.tar"'
+                include_txt += f" --include {fault_name}_{data_type}*.tar"
         logfile = download_root/f"{dropbox_cs_ver}.log"
         print(f"## Downloading {dropbox_path} to {download_root}. Check progress with tail -f {logfile}")
         cmd = f"rclone copy {dropbox_path} {download_root} {include_txt} --progress"

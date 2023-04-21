@@ -102,12 +102,12 @@ def test_all_exist(data_type, fault_name):
         found, files = cherrypick_files(where, pat, rel_num_dict[fault_name])
         if found:
             print("---   Passed")
-    
+
         else:
             print(f"---   FAILED: {fault_name} {data_type} found {len(files)} !!!!!!!")
         #        print(files)
         for f in files:
-                files_dict[fault_name][data_type][str(f)] = f.stat().st_size
+            files_dict[fault_name][data_type][str(f)] = f.stat().st_size
 
         stocktake_df[col_num].loc[fault_name] = len(files)
         stocktake_df[col_ok].loc[fault_name] = found

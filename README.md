@@ -175,7 +175,7 @@ By default, this script will check every data type. However, if you wish to proc
 
 If all good, we can start upload files using `cs_dropbox_upload.py`. It uses two mandatory arguments.
 ```
-usage: cs_dropbox_upload.py [-h] [--tmp_dir TMP_DIR] [-t {Source,IM,BB}] [-f]
+usage: cs_dropbox_upload.py [-h] [--tmp_dir TMP_DIR] [-t {Source,IM,BB}] [-f] [--no_checksum]
                             cs_root files_to_sync
 
 positional arguments:

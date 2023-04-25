@@ -302,3 +302,26 @@ However, we consider the following steps to ensure files are correctly packaged 
 # How to download from Dropbox
 
 To retrive a cybershake archive data from Dropbox, use `cs_dropbox_download.py`. This allows you to select the cybershake version, specific data types, and faults to download, and untar them in the specified path. 
+
+A number of options have been implemented to accommodate a variety of use cases. 
+```
+usage: cs_dropbox_download.py [-h] [-t {Source,IM,BB}] [--download_dir DOWNLOAD_DIR] [--cleanup] [--no_download] [--inc_fault INC_FAULT] [--exc_fault EXC_FAULT] [--force_untar] dropbox_cs_ver
+
+positional arguments:
+  dropbox_cs_ver        CS ver stored in Dropbox
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -t {Source,IM,BB}, --data_types {Source,IM,BB}
+                        Data types to download. Gets all BB, IM, Source if not specified
+  --download_dir DOWNLOAD_DIR
+                        Download directory. Current directory if not specified
+  --cleanup             Delete *.tar files after extraction
+  --no_download         If download has been already done, and wish to untar only
+  --inc_fault INC_FAULT
+                        Include this fault. All if unspecified.
+  --exc_fault EXC_FAULT
+                        Exclude this fault. The fault is excluded if both inc_fault exc_fault are specified
+  --force_untar         Force untar from scratch
+
+```

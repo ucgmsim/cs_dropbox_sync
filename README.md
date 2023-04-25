@@ -4,13 +4,13 @@ Upload/Download Cybershake run data to/from Dropbox.
 # How to upload to Dropbox
 
 ## Assumptions
-![Screenshot from 2023-04-26 10-15-42](https://user-images.githubusercontent.com/466989/234416140-8722889b-b28c-42e5-8be2-0b59af1b3121.png)
+<img src="https://user-images.githubusercontent.com/466989/234416140-8722889b-b28c-42e5-8be2-0b59af1b3121.png" width="400" />
+
 1. Cybershake archives are maintained under Cybershake dropbox folder, and Cybershake versions to be used in vYYpM format. (eg. v22p4 or v22p12)
 2. Under Cybershake archive folder, let's say v20p5, we have list.txt (the list of faults and number of realisations per fault), and stocktake.csv, and folder for each fault.
 3. Each fault folder, let's say HikWgtnmax, we have a TAR file for each data type, BB, Source and IM, named in `{fault_name}_{data_type}.tar` format, such as `HikWgtnmax_IM.tar`. If the archive file size is meant to be larger than 100Gb, we split them and name them with a suffix `_{num}.tar`, such as `HikWgtnmax_BB_0.tar`, `HikWgtnmax_BB_1.tar`, ... `HikWgtnmax_BB_6f.tar`. Note that the last one of the series has `f` character to indicate this is the last. From the `f`-suffixed tar file, we know HikWgtnmax BB was split into 7 files (0,1,..6). If this one or anything 0...5 is missing, we know this archive is incomplete or damaged.
 4. The archive is mean to be maintained tidy. Yet if any supplementary non-standard data should be stored, put them under a folder whose name starting with `_` prefix.
-![Screenshot from 2023-04-26 10-22-06](https://user-images.githubusercontent.com/466989/234417066-0b6b84a2-94eb-45ed-bbe0-1f078faf5740.png)
-
+<img src="https://user-images.githubusercontent.com/466989/234417066-0b6b84a2-94eb-45ed-bbe0-1f078faf5740.png" width="300" />
 
 ## Step 0. Make sure rclone is available.
 

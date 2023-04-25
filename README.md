@@ -1,7 +1,16 @@
-# cs_dropbox_upload
-Upload Cybershake runs to Dropbox
+# Introduction
+Upload/Download Cybershake run data to/from Dropbox.
 
-# How to run
+# How to upload to Dropbox
+
+## Assumptions
+![Screenshot from 2023-04-26 10-15-42](https://user-images.githubusercontent.com/466989/234416140-8722889b-b28c-42e5-8be2-0b59af1b3121.png)
+1. Cybershake archives are maintained under Cybershake dropbox folder, and Cybershake versions to be used in vYYpM format. (eg. v22p4 or v22p12)
+2. Under Cybershake archive folder, let's say v20p5, we have list.txt (the list of faults and number of realisations per fault), and stocktake.csv, and folder for each fault.
+3. Each fault folder, let's say HikWgtnmax, we have a TAR file for each data type, BB, Source and IM, named in `{fault_name}_{data_type}.tar` format, such as `HikWgtnmax_IM.tar`. If the archive file size is meant to be larger than 100Gb, we split them and name them with a suffix `_{num}.tar`, such as `HikWgtnmax_BB_0.tar`, `HikWgtnmax_BB_1.tar`, ... `HikWgtnmax_BB_6f.tar`. Note that the last one of the series has `f` character to indicate this is the last. From the `f`-suffixed tar file, we know HikWgtnmax BB was split into 7 files (0,1,..6). If this one or anything 0...5 is missing, we know this archive is incomplete or damaged.
+4. The archive is mean to be maintained tidy. Yet if any supplementary non-standard data should be stored, put them under a folder whose name starting with `_` prefix.
+![Screenshot from 2023-04-26 10-22-06](https://user-images.githubusercontent.com/466989/234417066-0b6b84a2-94eb-45ed-bbe0-1f078faf5740.png)
+
 
 ## Step 0. Make sure rclone is available.
 
@@ -279,11 +288,17 @@ Elapsed time:       2m5.0s
 ```
 
 
-# File integrity and verification
+## File integrity and verification
 We assume files to be archived are good, and don't check the integrity of individual file, which is beyond the scope of this code. 
 However, we consider the following steps to ensure files are correctly packaged and archived on Dropbox.
-1. Check if everything is in place. Done by `cs_dropbox_preprocess.py`. It generates `stocktake.csv` to review what is included and what is missing.
+1. Check if everything is in place. Done by `cs_dropbox_preprocess.py`. Based on sync_patterns.yaml, it finds all the files that match the pattern, and generates `stocktake.csv` to review what is included and what is missing.
 2. Check if the copied version is identical to the original before making a TAR file : Done by `cs_dropbox_upload.py`. The files_to_sync.yaml contains the file size info. If both files have the same file size, we consider they are identical. (Checksum is an overkill for local file copy)
-3. After a TAR file is created, files contained are compared against the original, and aborts if there are issues (eg. file storage going low, producing incomplete TAR file)
-4. Dropbox upload: rclone copy automatically checks the size and mod time, which is believed to be sufficient to (full scale checksum is slow). Also rclone discards the copy if the file is half-finished or tampered. If "rclone ls" returns the file from Dropbox, it is *almost* guaranteed to be the exact copy (See https://forum.rclone.org/t/rclone-copy-files-and-checksum/14895/2). Having said that, a "rclone check" step is explicitly executed for extra safety (See https://rclone.org/commands/rclone_check/ ). If this is too slow, consider using "--no_checksum" argument to switch it off.
+3. After a TAR file is created, files contained are compared against the original, and *aborts* if there are issues (eg. file storage going low, producing incomplete TAR file).
+4. Dropbox upload: rclone copy automatically checks the size and mod time, which is believed to be sufficient to (full scale checksum is slow). Also rclone discards the copy if the file is half-finished or tampered. If "rclone ls" returns the file from Dropbox, it is *almost* guaranteed to be the exact copy (See https://forum.rclone.org/t/rclone-copy-files-and-checksum/14895/2). Having said that, a "rclone check" step is explicitly executed for extra safety (See https://rclone.org/commands/rclone_check/ ). The overhead for this extra check is little.
+5. After all the upload is complete, the upload script will traverse the remote storage and double-checks all the *supposedly uploaded* files are indeed there, and returns the final summary.
 
+
+
+# How to download from Dropbox
+
+To retrive a cybershake archive data from Dropbox, use `cs_dropbox_download.py`. This allows you to select the cybershake version, specific data types, and faults to download, and untar them in the specified path. 

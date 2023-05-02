@@ -64,15 +64,19 @@ def cherrypick_files(where, pattern, num):
         pattern = pattern.strip(OPTIONAL_PATTERN_MARKER)
         optional = True
 
-    if "?" in pattern or "*" in pattern:  # looking for multiple
+    if "*" in pattern or "?" in pattern:  # looking for multiple
         result = list(where.glob(pattern))
         #        print(result)
-        print(f"---   multiple expected: {num}")
         if optional:
             if len(result) > 0:  # ok, now this MUST match num (ie. no longer optional)
                 print(f"---   Now, must find {num}")
                 optional = False
-        found = not optional and len(result) == num
+            else:
+                print(f"---   OK if not found")
+                num = 0
+        else:
+            print(f"---   multiple expected: {num}")
+        found = len(result) == num
         return found, result
     else:  # single match
         found = Path(where / pattern).exists()
@@ -98,12 +102,12 @@ def test_all_exist(data_type, fault_name):
         found, files = cherrypick_files(where, pat, rel_num_dict[fault_name])
         if found:
             print("---   Passed")
-            for f in files:
-                files_dict[fault_name][data_type][str(f)] = f.stat().st_size
 
         else:
             print(f"---   FAILED: {fault_name} {data_type} found {len(files)} !!!!!!!")
         #        print(files)
+        for f in files:
+            files_dict[fault_name][data_type][str(f)] = f.stat().st_size
 
         stocktake_df[col_num].loc[fault_name] = len(files)
         stocktake_df[col_ok].loc[fault_name] = found

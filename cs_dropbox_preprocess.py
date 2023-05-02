@@ -43,7 +43,7 @@ def load_args():
     parser.add_argument(
         "-t",
         "--data_types",
-        help="Data types to download. Gets all BB, IM, Source if not specified",
+        help="Data types to scan. Gets all BB, IM, Source if not specified.",
         action="append",
         choices=DATA_TYPES,
         default=[],

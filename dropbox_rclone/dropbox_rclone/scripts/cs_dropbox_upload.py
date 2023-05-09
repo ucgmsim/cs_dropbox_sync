@@ -247,7 +247,6 @@ def pack(fault_name, data_type):
             tf.unlink()
 
     for i, one_partition in enumerate(partition_list):
-
         files_str = " ".join([str(f.relative_to(work_dir)) for f in one_partition])
         print(f"#### Making {tar_files[i].relative_to(Path.cwd())}")
         # make tar file

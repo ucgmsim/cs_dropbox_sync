@@ -36,7 +36,6 @@ pipeline {
                     echo "[ Installing ${env.JOB_NAME} ]"
                     python setup.py install
                     echo "[ Run test now ]"
-                    cd cs_dropbox_sync
                     pytest --black
                 """
             }

@@ -1,12 +1,13 @@
 import os
 import logging
+from pathlib import Path
 
 import flask
 
 from custom_log_handler import MultiProcessSafeTimedRotatingFileHandler
 
 
-app = flask.Flask("cs_api")
+app = flask.Flask(str(Path(__file__).parent))
 
 logfile = os.path.join(os.path.dirname(__file__), "logs/logfile.log")
 os.makedirs(os.path.dirname(logfile), exist_ok=True)

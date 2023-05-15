@@ -1,7 +1,5 @@
 import subprocess
 
-import numpy as np
-
 from dropbox_rclone import contants as const
 
 
@@ -27,7 +25,7 @@ def get_run_info(run: str):
         cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
     )
     out, err = p.communicate()
-    output = np.asarray(out.decode("utf-8").split("\n")[:-1])
+    output = out.decode("utf-8").split("\n")[:-1]
 
     data_types = set()
     faults = dict()

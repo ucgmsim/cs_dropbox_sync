@@ -28,3 +28,4 @@ logging.getLogger("matplotlib").setLevel(logging.ERROR)
 
 # Add the endpoints
 from api import metadata
+from api import runs

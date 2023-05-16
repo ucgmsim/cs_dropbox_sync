@@ -17,8 +17,8 @@ def get_tectonic_types():
     with open(const.METADATA_FILE, "r") as f:
         run_metadata = yaml.safe_load(f)
     # Get all unique tectonic types from the metadata file
-    tectonic_types = {run["tectonic_types"] for run in run_metadata}
-    return flask.jsonify(list(tectonic_types))
+    tectonic_types = {tect_type for run in run_metadata.values() for tect_type in run["tectonic_types"]}
+    return flask.jsonify(sorted(list(tectonic_types)))
 
 
 @server.app.route(const.GET_GRID_SPACING, methods=["GET"])
@@ -32,8 +32,8 @@ def get_grid_spacing():
     with open(const.METADATA_FILE, "r") as f:
         run_metadata = yaml.safe_load(f)
     # Get all unique grid spacing from the metadata file
-    grid_spacing = {run["grid"] for run in run_metadata}
-    return flask.jsonify(list(grid_spacing))
+    grid_spacing = {run["grid"] for run in run_metadata.values()}
+    return flask.jsonify(sorted(list(grid_spacing)))
 
 
 @server.app.route(const.GET_SCIENTIFIC_VERSION, methods=["GET"])
@@ -47,5 +47,16 @@ def get_scientific_version():
     with open(const.METADATA_FILE, "r") as f:
         run_metadata = yaml.safe_load(f)
     # Get all unique scientific version from the metadata file
-    scientific_version = {run["scientific_version"] for run in run_metadata}
-    return flask.jsonify(list(scientific_version))
+    scientific_version = {str(run["scientific_version"]) for run in run_metadata.values()}
+    return flask.jsonify(sorted(list(scientific_version)))
+
+
+@server.app.route(const.GET_DATA_TYPES, methods=["GET"])
+@cross_origin(expose_headers=["Content-Type", "Authorization"])
+@utils.endpoint_exception_handling(server.app)
+def get_data_types():
+    """
+    Gets the data types from the constants
+    """
+    server.app.logger.info(f"Received request at {const.GET_DATA_TYPES}")
+    return flask.jsonify(const.AVAILABLE_DATA_TYPES)

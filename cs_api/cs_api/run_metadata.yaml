@@ -1,10 +1,3 @@
-v18p6:
-  region: Whole Country
-  grid: 400m
-  scientific_version: 18.6
-  tectonic_types:
-    - Shallow Crustal
-    - Volcanic
 v19p5:
   region: Whole Country
   grid: 400m

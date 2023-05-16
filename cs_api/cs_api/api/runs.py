@@ -58,8 +58,7 @@ def get_full_run_info():
             run_info[run]["card_info"][metadata_key] = "Unknown"
 
     # Get the info from the dropbox folder
-    data_types, faults = dropbox_reading.get_run_info(run)
-    run_info[run]["data_types"] = data_types
+    faults = dropbox_reading.get_run_info(run)
     run_info[run]["faults"] = faults
     run_info[run]["card_info"]["n_faults"] = len(faults)
     return flask.jsonify(run_info)

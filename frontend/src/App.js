@@ -1,6 +1,6 @@
 import React from "react";
 
-import { Form } from "components";
+import { Form, Map } from "components";
 
 import "assets/App.css";
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -8,9 +8,20 @@ import "bootstrap/dist/css/bootstrap.min.css";
 function App() {
   return (
     <div>
-      <div className="header">Simulation Data</div>
+      <div className="title">Cybershake</div>
       <div className="App d-flex flex-column h-100">
-        <Form/>
+        <div className="row two-column-row">
+          <div className="col-7">
+            {/* <div className="border section"> */}
+              <Form/>
+            {/* </div> */}
+          </div>
+          <div className="col-5">
+            {/* <div className="border section"> */}
+              <Map/>
+            {/* </div> */}
+          </div>
+        </div>
       </div>
     </div>
   );

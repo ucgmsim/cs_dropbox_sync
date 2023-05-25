@@ -6,21 +6,25 @@ import * as CONSTANTS from "Constants";
 
 import "assets/Form.css";
 import { Button } from "react-bootstrap";
+import { APIQueryBuilder } from "./Utils";
 
 const Form = () => {
   // Filters
   const [availableGridSpacings, setAvailableGridSpacings] = useState([]);
   const [selectedGridSpacings, setSelectedGridSpacings] = useState([]);
-  const [availableScientificVersions, setAvailableScientificVersions] = useState([]);
-  const [selectedScientificVersions, setSelectedScientificVersions] = useState([]);
+  const [availableScientificVersions, setAvailableScientificVersions] =
+    useState([]);
+  const [selectedScientificVersions, setSelectedScientificVersions] = useState(
+    []
+  );
   const [availableTectonicTypes, setAvailableTectonicTypes] = useState([]);
   const [selectedTectonicTypes, setSelectedTectonicTypes] = useState([]);
 
   // Runs
   const [availableRuns, setAvailableRuns] = useState([]);
-  const [shownRuns, setShownRuns] = useState(["1", "2"]);
+  const [shownRuns, setShownRuns] = useState([]);
   const [selectedRun, setSelectedRun] = useState([]);
-  const [runData, setRunData] = useState([]);
+  const [runData, setRunData] = useState({});
   const [selectedRunData, setSelectedRunData] = useState([]);
 
   // Download Section
@@ -62,7 +66,6 @@ const Form = () => {
       });
     }
   }, [availableScientificVersions]);
-
 
   // Get Tectonic Types filter on page load
   useEffect(() => {
@@ -113,6 +116,47 @@ const Form = () => {
         setAvailableRuns(tempOptionArray);
         setShownRuns(tempOptionArray);
       });
+    } else {
+      // Get the run data for each availabe run that is not already in the runData dictionary
+      for (const run of Object.values(availableRuns)) {
+        if (!runData[run.value]) {
+          let queryString = APIQueryBuilder({ run: run.value });
+          fetch(
+            CONSTANTS.CS_API_URL +
+              CONSTANTS.GET_RUNS_INFO_ENDPOINT +
+              queryString,
+            {
+              method: "GET",
+            }
+          ).then(async (response) => {
+            const responseData = await response.json();
+            // Add the Run Data to the runData dictionary
+            let tempRunData = runData;
+            tempRunData[run.value] = responseData[run.value];
+            console.log(tempRunData);
+            setRunData(tempRunData);
+          });
+        }
+      }
+
+      // Filter Runs based on selected filters
+      //   let tempShownRuns = availableRuns;
+      //   if (selectedGridSpacings.length > 0) {
+      //     tempShownRuns = tempShownRuns.filter((run) =>
+      //       selectedGridSpacings.includes(run.value.grid_spacing)
+      //     );
+      //   }
+      //   if (selectedScientificVersions.length > 0) {
+      //     tempShownRuns = tempShownRuns.filter((run) =>
+      //       selectedScientificVersions.includes(run.value.scientific_version)
+      //     );
+      //   }
+      //   if (selectedTectonicTypes.length > 0) {
+      //     tempShownRuns = tempShownRuns.filter((run) =>
+      //       selectedTectonicTypes.includes(run.value.tectonic_type)
+      //     );
+      //   }
+      //   setShownRuns(tempShownRuns);
     }
   }, [availableRuns]);
 
@@ -166,11 +210,13 @@ const Form = () => {
         </div>
       </div>
       <div className="sub-section">
-        <Runs
-          viewRuns={shownRuns}
-          runData={runData}
-          setRun={setSelectedRun}
-        />
+        <div className="border run-cards-section">
+          <Runs
+            viewRuns={shownRuns}
+            runData={runData}
+            setRun={setSelectedRun}
+          />
+        </div>
       </div>
       <div className="sub-section">
         <div className="form-label">Download Data</div>

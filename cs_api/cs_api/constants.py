@@ -12,6 +12,3 @@ GET_RUN_INFO = "/runs/info"
 
 # Metadata Path
 METADATA_FILE = Path(__file__).parent / "db" / "run_metadata.yaml"
-
-# Select box constants
-AVAILABLE_DATA_TYPES = ["IM", "Source"]

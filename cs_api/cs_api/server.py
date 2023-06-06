@@ -29,12 +29,7 @@ app.logger.addHandler(TRFhandler)
 logging.getLogger("matplotlib").setLevel(logging.ERROR)
 
 # Connection details for the DB
-app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://{0}:{1}@{2}/{3}".format(
-    os.environ["DB_USERNAME"],
-    os.environ["DB_PASSWORD"],
-    os.environ["DB_SERVER"],
-    os.environ["DB_NAME"],
-)
+app.config["SQLALCHEMY_DATABASE_URI"] = 'sqlite:///' + os.environ["DB_PATH"]
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)

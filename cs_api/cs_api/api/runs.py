@@ -42,11 +42,15 @@ def get_full_run_info():
             [tect_type.tect_type for tect_type in run.tect_types]
         )
         run_info[run_name]["card_info"]["grid_spacing"] = run.grid_spacing.grid_spacing
-        run_info[run_name]["card_info"]["scientific_version"] = run.scientific_version.scientific_version
+        run_info[run_name]["card_info"][
+            "scientific_version"
+        ] = run.scientific_version.scientific_version
         run_info[run_name]["card_info"]["n_faults"] = len(run.faults)
 
         # Add data types available such as BB, IM, Source
-        run_info[run_name]["data_types"] = [data_type.data_type for data_type in run.data_types]
+        run_info[run_name]["data_types"] = [
+            data_type.data_type for data_type in run.data_types
+        ]
 
         # Add fault info such as fault name and associated files
         run_info[run_name]["faults"] = dict()

@@ -78,8 +78,6 @@ class File(db.Model):
 
     data_type_id = db.Column(db.Integer, db.ForeignKey('data_types.id'))
     data_type = db.relationship('DataType')
-    # fault_id = db.Column(db.Integer, db.ForeignKey('faults.id'))
-    # fault = db.relationship('Fault', backref='files')
 
 
 class TectType(db.Model):

@@ -43,6 +43,7 @@ for data_type in DEFAULT_DATA_TYPES:
 
 
 # Add the runs and all their fault information to the database
+# TODO Make this a function to be called by a scanner for new runs on dropbox
 for run, run_info in run_metadata.items():
     print(f"Adding run {run} to the database")
     faults = dropbox_reading.get_run_info(run)

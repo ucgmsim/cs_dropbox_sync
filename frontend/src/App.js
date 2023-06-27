@@ -12,14 +12,10 @@ function App() {
       <div className="App d-flex flex-column h-100">
         <div className="row two-column-row">
           <div className="col-7 h-100">
-            {/* <div className="border section"> */}
             <Form />
-            {/* </div> */}
           </div>
           <div className="col-5 h-100">
-            {/* <div className="border section"> */}
             <Map />
-            {/* </div> */}
           </div>
         </div>
       </div>

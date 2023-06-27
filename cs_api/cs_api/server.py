@@ -9,7 +9,6 @@ from custom_log_handler import MultiProcessSafeTimedRotatingFileHandler
 
 
 app = flask.Flask(str(Path(__file__).parent))
-app.app_context().push()
 
 logfile = os.path.join(os.path.dirname(__file__), "logs/logfile.log")
 os.makedirs(os.path.dirname(logfile), exist_ok=True)

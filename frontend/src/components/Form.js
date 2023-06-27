@@ -24,7 +24,7 @@ const Form = () => {
   const [availableRuns, setAvailableRuns] = useState([]);
   const [shownRuns, setShownRuns] = useState([]);
   const [selectedRun, setSelectedRun] = useState([]);
-  const [runData, setRunData] = useState({});
+  const [runData, setRunData] = useState([]);
   const [selectedRunData, setSelectedRunData] = useState([]);
 
   // Download Section
@@ -116,47 +116,15 @@ const Form = () => {
         setAvailableRuns(tempOptionArray);
         setShownRuns(tempOptionArray);
       });
-    } else {
-      // Get the run data for each availabe run that is not already in the runData dictionary
-      for (const run of Object.values(availableRuns)) {
-        if (!runData[run.value]) {
-          let queryString = APIQueryBuilder({ run: run.value });
-          fetch(
-            CONSTANTS.CS_API_URL +
-              CONSTANTS.GET_RUNS_INFO_ENDPOINT +
-              queryString,
-            {
-              method: "GET",
-            }
-          ).then(async (response) => {
-            const responseData = await response.json();
-            // Add the Run Data to the runData dictionary
-            let tempRunData = runData;
-            tempRunData[run.value] = responseData[run.value];
-            console.log(tempRunData);
-            setRunData(tempRunData);
-          });
-        }
-      }
-
-      // Filter Runs based on selected filters
-      //   let tempShownRuns = availableRuns;
-      //   if (selectedGridSpacings.length > 0) {
-      //     tempShownRuns = tempShownRuns.filter((run) =>
-      //       selectedGridSpacings.includes(run.value.grid_spacing)
-      //     );
-      //   }
-      //   if (selectedScientificVersions.length > 0) {
-      //     tempShownRuns = tempShownRuns.filter((run) =>
-      //       selectedScientificVersions.includes(run.value.scientific_version)
-      //     );
-      //   }
-      //   if (selectedTectonicTypes.length > 0) {
-      //     tempShownRuns = tempShownRuns.filter((run) =>
-      //       selectedTectonicTypes.includes(run.value.tectonic_type)
-      //     );
-      //   }
-      //   setShownRuns(tempShownRuns);
+    }
+    if (Object.keys(runData).length === 0) {
+      // Get the run data for all the runs
+      fetch(CONSTANTS.CS_API_URL + CONSTANTS.GET_RUNS_INFO_ENDPOINT, {
+        method: "GET",
+      }).then(async (response) => {
+        const responseData = await response.json();
+        setRunData(responseData);
+      });
     }
   }, [availableRuns]);
 

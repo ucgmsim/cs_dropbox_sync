@@ -5,49 +5,65 @@ import * as CONSTANTS from "Constants";
 
 import "assets/Runs.css";
 
-const Runs = (viewRuns, runData, setRun) => {
+const Runs = ({ viewRuns, runData, setRun }) => {
+  const [loadedRunData, setLoadedRunData] = useState([]);
+
   // Update when the runData changes
   useEffect(() => {
     console.log("Run Data Changed");
-    console.log(runData);
+    // Only update if the runData length has changed
+    if (runData.length !== loadedRunData.length) {
+      console.log("Updating Run Data");
+      // Convert the runData array into a lookup table
+      const runDataLookup = runData.reduce((lookup, run) => {
+        lookup[Object.keys(run)[0]] = Object.values(run)[0];
+        return lookup;
+      }, {});
+      setLoadedRunData(runDataLookup);
+    }
   }, [runData]);
 
-  if (viewRuns.viewRuns.length > 0) {
+  const loadingPlaceholder = (
+    <Placeholder as={Card.Text} animation="glow" xs={12}>
+      <Placeholder xs={8} size={"sm"} bg="secondary" />{" "}
+      <Placeholder xs={3} size={"sm"} bg="secondary" />
+      <Placeholder xs={5} size={"sm"} bg="secondary" />{" "}
+      <Placeholder xs={6} size={"sm"} bg="secondary" />
+      <Placeholder xs={7} size={"sm"} bg="secondary" />{" "}
+      <Placeholder xs={4} size={"sm"} bg="secondary" />
+      <Placeholder xs={8} size={"sm"} bg="secondary" />{" "}
+      <Placeholder xs={3} size={"sm"} bg="secondary" />
+      <Placeholder xs={7} size={"sm"} bg="secondary" />{" "}
+      <Placeholder xs={4} size={"sm"} bg="secondary" />
+    </Placeholder>
+  );
+
+  if (viewRuns.length > 0) {
     return (
       <div className="sub-section run-card-holder">
-        {viewRuns.viewRuns.map(function (run, i) {
+        {viewRuns.map(function (run, i) {
           return (
             <Card className="run-card" key={i}>
               <Card.Body className="run-card-body">
                 <Card.Title className="run-card-title">{run.value}</Card.Title>
-                {runData[run.value] &&
-                  runData[run.value]["card_info"]["n_faults"]}
-                {runData[run.value] && (
-                  <Card.Text className="run-card-text">
-                    Number of Faults:{" "}
-                    {runData[run.value]["card_info"]["n_faults"]}
-                    Region: {runData[run.value]["card_info"]["region"]}
-                    Grid Spacing: {runData[run.value]["card_info"]["grid"]}
-                    Scientific Version:{" "}
-                    {runData[run.value]["card_info"]["scientific_version"]}
-                    Tectonic Types:{" "}
-                    {runData[run.value]["card_info"]["tectonic_types"]}
+                {loadedRunData[run.value] && (
+                  <Card.Text className="run-card-info-text">
+                    <b>Number of Faults:</b> {loadedRunData[run.value]["card_info"]["n_faults"]}
+                    <br />
+                    <b>Region:</b> {loadedRunData[run.value]["card_info"]["region"]}
+                    <br />
+                    <b>Grid Spacing:</b> {loadedRunData[run.value]["card_info"]["grid_spacing"]}
+                    <br />
+                    <b>Scientific Version:</b> {
+                      loadedRunData[run.value]["card_info"][
+                        "scientific_version"
+                      ]
+                    }
+                    <br />
+                    <b>Tectonic Types:</b> {loadedRunData[run.value]["card_info"]["tectonic_types"].join(', ')}
                   </Card.Text>
                 )}
-                {!runData[run.value] && (
-                  <Placeholder as={Card.Text} animation="glow" xs={12}>
-                    <Placeholder xs={8} size={"sm"} bg="secondary" />{" "}
-                    <Placeholder xs={3} size={"sm"} bg="secondary" />
-                    <Placeholder xs={5} size={"sm"} bg="secondary" />{" "}
-                    <Placeholder xs={6} size={"sm"} bg="secondary" />
-                    <Placeholder xs={7} size={"sm"} bg="secondary" />{" "}
-                    <Placeholder xs={4} size={"sm"} bg="secondary" />
-                    <Placeholder xs={8} size={"sm"} bg="secondary" />{" "}
-                    <Placeholder xs={3} size={"sm"} bg="secondary" />
-                    <Placeholder xs={7} size={"sm"} bg="secondary" />{" "}
-                    <Placeholder xs={4} size={"sm"} bg="secondary" />
-                  </Placeholder>
-                )}
+                {!loadedRunData[run.value] && loadingPlaceholder}
               </Card.Body>
             </Card>
           );
@@ -67,18 +83,7 @@ const Runs = (viewRuns, runData, setRun) => {
                     <Placeholder xs={12} size={"lg"} bg="secondary" />{" "}
                   </Placeholder>
                 </Card.Title>
-                <Placeholder as={Card.Text} animation="glow" xs={12}>
-                  <Placeholder xs={8} size={"sm"} bg="secondary" />{" "}
-                  <Placeholder xs={3} size={"sm"} bg="secondary" />
-                  <Placeholder xs={5} size={"sm"} bg="secondary" />{" "}
-                  <Placeholder xs={6} size={"sm"} bg="secondary" />
-                  <Placeholder xs={7} size={"sm"} bg="secondary" />{" "}
-                  <Placeholder xs={4} size={"sm"} bg="secondary" />
-                  <Placeholder xs={8} size={"sm"} bg="secondary" />{" "}
-                  <Placeholder xs={3} size={"sm"} bg="secondary" />
-                  <Placeholder xs={7} size={"sm"} bg="secondary" />{" "}
-                  <Placeholder xs={4} size={"sm"} bg="secondary" />
-                </Placeholder>
+                {loadingPlaceholder}
               </Card.Body>
             </Card>
           );

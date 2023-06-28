@@ -1,6 +1,6 @@
 {
-    "short_name": "Cybershake Data",
-    "name": "Cybershake Data",
+    "short_name": "Simulation Data",
+    "name": "Simulation Data",
     "start_url": "./",
     "scope": ".",
     "display": "standalone",

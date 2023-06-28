@@ -7,7 +7,7 @@ setuptools.setup(
     name="cs_dropbox_sync",
     version="1.0.0",
     author="Quakecore",
-    description="Package for managing dropbox with cybershake archives",
+    description="Package for managing dropbox with simulation run archives",
     url="https://github.com/ucgmsim/cs_dropbox_sync",
     long_description=long_description,
     long_description_content_type="text/markdown",

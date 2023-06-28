@@ -1,5 +1,7 @@
 import subprocess
 
+import dropbox
+
 from dropbox_rclone import contants as const
 
 
@@ -22,6 +24,16 @@ def get_run_info(run: str):
     """
     Gets the run info from the dropbox folder such as the
     Data types available and fault names and their file sizes per data type
+
+    Parameters
+    ----------
+    run : str
+        Name of the run
+
+    Returns
+    -------
+    dict
+        Dictionary of fault names and their files with sizes
     """
     cmd = f"rclone ls {const.CYBERSHAKE_DIRECTORY}/{run}"
     p = subprocess.Popen(
@@ -47,3 +59,31 @@ def get_run_info(run: str):
                 faults[fault_name] = {file: size}
 
     return faults
+
+
+def get_download_link(file_path: str, dbx: dropbox.Dropbox):
+    """
+    Gets the download link for the file at the given path
+
+    Parameters
+    ---------
+    file_path : str
+        Path to the file on dropbox
+    dbx : dropbox.Dropbox
+        Dropbox object to use to get the download link
+
+    Returns
+    -------
+    str
+        Download link for the file
+    """
+    shared_links = dbx.sharing_list_shared_links(file_path).links
+    for link in shared_links:
+        if link.path_lower == file_path.lower():
+            download_link = link.url.replace("www.dropbox.com", "dl.dropboxusercontent.com")
+            return download_link
+
+    # If no link was found, create a new one
+    shared_link = dbx.sharing_create_shared_link_with_settings(file_path)
+    download_link = shared_link.url.replace("www.dropbox.com", "dl.dropboxusercontent.com")
+    return download_link

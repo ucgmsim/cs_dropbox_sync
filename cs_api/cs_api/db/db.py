@@ -1,10 +1,5 @@
-import yaml
-
 from cs_api.server import db
-from cs_api import constants as const
-from dropbox_rclone import dropbox_reading
 
-# Because models need to be imported after db gets imported
 from cs_api.db.models import *
 
 
@@ -61,3 +56,13 @@ def get_available_runs():
     :return: list of available run objects
     """
     return Run.query.all()
+
+
+def add_run(run: Run):
+    """
+    Add a run to the database
+    :param run: run object
+    :return: None
+    """
+    db.session.add(run)
+    db.session.commit()

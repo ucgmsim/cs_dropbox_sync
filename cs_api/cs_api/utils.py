@@ -1,3 +1,4 @@
+from typing import List, Union, Tuple, Iterable, Type, Dict
 from functools import wraps
 
 import flask
@@ -40,3 +41,30 @@ def endpoint_exception_handling(app):
         return decorated
 
     return endpoint_exception_handling_decorator
+
+
+def get_check_keys(
+    data_dict: Dict,
+    keys: Iterable[Union[str, Tuple[str, Type]]],
+) -> List[str]:
+    """Retrieves the specified keys from the data dict, throws a
+    MissingKey exception if one of the keys does not have a value.
+
+    If a type is specified with a key (as a tuple of [key, type]) then the
+    value is also converted to the specified type
+    """
+    values = []
+    for key_val in keys:
+        # Check if a type is specified with the key
+        if isinstance(key_val, tuple):
+            cur_key, cur_type = key_val
+        else:
+            cur_key, cur_type = key_val, None
+
+        value = data_dict.get(cur_key)
+        if value is None:
+            raise MissingKeyError(cur_key)
+
+        # Perform a type conversion if one was given & append value
+        values.append(value if cur_type is None else cur_type(value))
+    return values

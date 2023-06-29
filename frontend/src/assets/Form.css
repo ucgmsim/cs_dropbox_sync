@@ -1,0 +1,19 @@
+.form-label {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.sub-section {
+  margin-bottom: 1%;
+}
+
+.download-button {
+  margin-top: 2%;
+  margin-bottom: 2%;
+}
+
+.run-cards-section{
+  height: 55vh;
+  overflow-y: scroll;
+}

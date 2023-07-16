@@ -1,5 +1,6 @@
 from cs_api.server import db
 
+from cs_api import constants as const
 from dropbox_rclone import dropbox_reading
 
 
@@ -68,6 +69,7 @@ class Run(db.Model):
             Dictionary of run metadata information from the yaml file
         """
         faults = dropbox_reading.get_run_info(run_name)
+        dbx = dropbox_reading.get_dropbox_api_object()
         self.run_name = run_name
         self.n_faults = len(faults)
         self.region = run_info["region"]
@@ -92,9 +94,10 @@ class Run(db.Model):
                     data_type=data_type_str
                 ).first()
                 data_types_found.add(file_data_type)
+                file_path = dropbox_reading.get_full_dropbox_path(run_name, file_name.split("/")[1])
                 file_obj = File(
                     file_name=file_name.split("/")[1],
-                    download_link="",
+                    download_link=dropbox_reading.get_download_link(file_path, dbx),
                     file_size=file_size,
                     data_type=file_data_type,
                 )

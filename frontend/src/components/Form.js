@@ -5,8 +5,9 @@ import { Runs } from "components";
 import * as CONSTANTS from "Constants";
 
 import "assets/Form.css";
-import { Button } from "react-bootstrap";
+import { Button, ProgressBar } from "react-bootstrap";
 import { APIQueryBuilder } from "./Utils";
+import { downloadZip } from "https://cdn.jsdelivr.net/npm/client-zip/index.js";
 
 const Form = () => {
   // Filters
@@ -25,6 +26,7 @@ const Form = () => {
   const [shownRuns, setShownRuns] = useState([]);
   const [selectedRun, setSelectedRun] = useState([]);
   const [runData, setRunData] = useState([]);
+  const [runDataLookup, setRunDataLookup] = useState({});
   const [selectedRunData, setSelectedRunData] = useState([]);
 
   // Download Section
@@ -32,6 +34,11 @@ const Form = () => {
   const [selectedDataTypes, setSelectedDataTypes] = useState([]);
   const [availableFaults, setAvailableFaults] = useState([]);
   const [selectedFaults, setSelectedFaults] = useState([]);
+  const [formattedRemainingTime, setFormattedRemainingTime] = useState(null);
+  const [progress, setProgress] = useState(0);
+  const [progressWidth, setProgressWidth] = useState(0);
+
+  const FileSaver = require('file-saver');
 
   // Get Grid Spacing filter on page load
   useEffect(() => {
@@ -84,23 +91,6 @@ const Form = () => {
     }
   }, [availableTectonicTypes]);
 
-  // Get Data Types on page load
-  useEffect(() => {
-    if (availableDataTypes.length === 0) {
-      fetch(CONSTANTS.CS_API_URL + CONSTANTS.GET_DATA_TYPES_ENDPOINT, {
-        method: "GET",
-      }).then(async (response) => {
-        const responseData = await response.json();
-        // Set Available Data Types Select Dropdown
-        let tempOptionArray = [];
-        for (const value of Object.values(responseData)) {
-          tempOptionArray.push({ value: value, label: value });
-        }
-        setAvailableDataTypes(tempOptionArray);
-      });
-    }
-  }, [availableDataTypes]);
-
   // Get Available Runs on page load
   useEffect(() => {
     if (availableRuns.length === 0) {
@@ -128,6 +118,49 @@ const Form = () => {
     }
   }, [availableRuns]);
 
+  // Update when the runData changes
+  useEffect(() => {
+    // Only update if the runData length has changed
+    if (runData.length !== Object.keys(runDataLookup).length) {
+      // Convert the runData array into a lookup table
+      const runDataLookupTemp = runData.reduce((lookup, run) => {
+        lookup[Object.keys(run)[0]] = Object.values(run)[0];
+        return lookup;
+      }, {});
+      setRunDataLookup(runDataLookupTemp);
+    }
+  }, [runData]);
+
+  // Change the download options when a run is selected
+  useEffect(() => {
+    if (selectedRun.length > 0) {
+      if (Object.keys(runDataLookup).length > 0) {
+        // Set the selected run data
+        setSelectedRunData(runDataLookup[selectedRun[0]]);
+
+        // Set Available Data Types Select Dropdown
+        let tempOptionArray = [];
+        for (const value of Object.values(
+          runDataLookup[selectedRun[0]]["data_types"]
+        )) {
+          tempOptionArray.push({ value: value, label: value });
+        }
+        setAvailableDataTypes(tempOptionArray);
+        // Set Available Faults Array
+        tempOptionArray = [];
+        for (const key of Object.keys(
+          runDataLookup[selectedRun[0]]["faults"]
+        )) {
+          tempOptionArray.push({ value: key, label: key });
+        }
+        setAvailableFaults(tempOptionArray);
+      } else {
+        setAvailableDataTypes([]);
+        setAvailableFaults([]);
+      }
+    }
+  }, [selectedRun]);
+
   const onSelectGridSpacing = (e) => {
     setSelectedGridSpacings(e);
   };
@@ -139,6 +172,127 @@ const Form = () => {
   const onSelectTectonicType = (e) => {
     setSelectedTectonicTypes(e);
   };
+
+  const downloadData = () => {
+    // Downloads the data based on the selected preferences
+    // Get the strings of the selected data types
+    const selectedDataTypeStrings = selectedDataTypes.map((item) => item.value);
+
+    let delay = 0;
+    let urls = [];
+    // Loop over the selected Faults
+    for (const fault of selectedFaults) {
+      // Find the fault info in the selected run data
+      const faultInfo = selectedRunData["faults"][fault.value];
+      // Loop over each file in the faultInfo and check if it matches the selected data types
+      for (const file of Object.keys(faultInfo)) {
+        if (selectedDataTypeStrings.some((item) => file.includes(item))) {
+          urls.push(faultInfo[file]);
+        }
+      }
+    }
+    downloadAndZipFiles(urls);
+  };
+
+  async function downloadAndZipFiles(files) {
+    // Downloads and zips the given files
+    const zipFiles = [];
+  
+    const totalFiles = files.length;
+    let completedFiles = 0;
+    let totalBytes = 0;
+    let downloadedBytes = 0;
+    let startTime = new Date();
+    let averageDownloadSpeed = 14926; // Based on an average calculated before
+    let remainingTime = 0;
+    let cur_file_size = files[0]["file_size"];
+    let currentStepTime = startTime;
+
+    // Set the progress bar to 0
+    setProgress(0);
+
+    // Calculate totalBytes
+    for (const file of files) {
+      totalBytes += file["file_size"];
+    }
+
+    const updateRemainingTime = () => {
+      const currentTime = new Date();
+      const elapsedTime = currentTime - startTime; // Time in milliseconds
+      const remainingBytes = totalBytes - (elapsedTime * averageDownloadSpeed);
+      remainingTime = remainingBytes / averageDownloadSpeed;
+
+      // Update the progress bar
+      let current_step = Math.round((completedFiles / totalFiles) * 100);
+      let next_step = Math.round(((completedFiles + 1) / totalFiles) * 100);
+      let estimated_completion = Math.min(averageDownloadSpeed * (currentTime- currentStepTime) / cur_file_size, 1);
+      setProgress(Math.round(current_step + (next_step - current_step) * estimated_completion));
+      console.log(current_step);
+      console.log(next_step);
+      console.log(estimated_completion);
+  
+      // Format the remaining time based on different units
+      if (remainingTime < 60000) {
+        setFormattedRemainingTime((remainingTime / 1000).toFixed(1) + ' seconds');
+      } else if (remainingTime < 3600000) {
+        const minutes = Math.floor(remainingTime / 60000);
+        const seconds = Math.floor((remainingTime % 60000) / 1000);
+        setFormattedRemainingTime(minutes + ' minutes ' + seconds + ' seconds');
+      } else {
+        const hours = Math.floor(remainingTime / 3600000);
+        const minutes = Math.floor((remainingTime % 3600000) / 60000);
+        setFormattedRemainingTime(hours + ' hours ' + minutes + ' minutes');
+      }
+    };
+
+    let updateInterval = setInterval(updateRemainingTime, 1000); // Update every 1 second
+  
+    for (const file of files) {
+      const url = file["download_link"];
+      const file_size = file["file_size"];
+      cur_file_size = file_size;
+      const filename = url.split('/').pop().split("?").shift();
+  
+      console.log("Downloading file: " + url);
+      const response = await fetch(url);
+      const content = await response.text();
+      console.log("Downloaded file: " + url);
+  
+      downloadedBytes += file_size;
+      const zipFile = {
+        name: filename,
+        lastModified: new Date(),
+        input: content
+      };
+      zipFiles.push(zipFile);
+      console.log("Zipped file: " + url);
+  
+      completedFiles++;
+      setProgress(Math.round((completedFiles / totalFiles) * 100));
+  
+      currentStepTime = new Date();
+      const elapsedTime = currentStepTime - startTime; // Time in milliseconds
+      averageDownloadSpeed = downloadedBytes / elapsedTime; // Update average download speed
+      console.log("Average download speed: " + averageDownloadSpeed + " bytes per millisecond");
+  
+      clearInterval(updateInterval); // Clear the interval before updating remainingTime
+      updateRemainingTime(); // Update remainingTime immediately after file download
+      updateInterval = setInterval(updateRemainingTime, 1000); // Resume the interval
+    }
+  
+    clearInterval(updateInterval); 
+  
+    // Generate the ZIP blob
+    let downloadStart = new Date();
+    const zipBlob = await downloadZip(zipFiles).blob();
+
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(zipBlob);
+    link.download = selectedRun + '.zip';
+    link.click();
+    link.remove();
+    console.log("Time taken for zip compression: " + (new Date() - downloadStart) + " milliseconds");
+  }
 
   return (
     <div className="border section">
@@ -181,7 +335,7 @@ const Form = () => {
         <div className="border run-cards-section">
           <Runs
             viewRuns={shownRuns}
-            runData={runData}
+            runData={runDataLookup}
             setRun={setSelectedRun}
           />
         </div>
@@ -210,9 +364,34 @@ const Form = () => {
             ></Select>
           </div>
         </div>
-        <Button variant="primary" size="lg" className="download-button">
+        <Button
+          variant="primary"
+          size="lg"
+          className="download-button"
+          onClick={downloadData}
+        >
           Download
         </Button>
+        <ProgressBar now={progress} label={`${progress}%`} animated striped />
+        {/* <div
+        style={{
+          width: '100%',
+          height: '20px',
+          backgroundColor: '#eee',
+          borderRadius: '10px',
+          overflow: 'hidden',
+        }}
+      >
+        <div
+          style={{
+            width: `${progressWidth}%`,
+            height: '100%',
+            backgroundColor: '#007bff',
+            transition: 'width 300ms ease-in-out',
+          }}
+        />
+      </div> */}
+      <p>Estimated Time Remaining: {formattedRemainingTime}</p>
       </div>
     </div>
   );

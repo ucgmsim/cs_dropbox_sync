@@ -1,3 +1,4 @@
+import os
 import subprocess
 
 import dropbox
@@ -77,13 +78,44 @@ def get_download_link(file_path: str, dbx: dropbox.Dropbox):
     str
         Download link for the file
     """
-    shared_links = dbx.sharing_list_shared_links(file_path).links
-    for link in shared_links:
-        if link.path_lower == file_path.lower():
-            download_link = link.url.replace("www.dropbox.com", "dl.dropboxusercontent.com")
-            return download_link
-
-    # If no link was found, create a new one
-    shared_link = dbx.sharing_create_shared_link_with_settings(file_path)
-    download_link = shared_link.url.replace("www.dropbox.com", "dl.dropboxusercontent.com")
+    download_link = None
+    try:
+        # If no link was found, create a new one
+        shared_link = dbx.sharing_create_shared_link_with_settings(file_path)
+        download_link = shared_link.url.replace("www.dropbox.com", "dl.dropboxusercontent.com")
+    except dropbox.exceptions.ApiError as e:
+        shared_links = dbx.sharing_list_shared_links(file_path).links
+        for link in shared_links:
+            if link.path_lower == file_path.lower():
+                download_link = link.url.replace("www.dropbox.com", "dl.dropboxusercontent.com")
+    if download_link is None:
+        raise Exception("Could not find download link for file")
     return download_link
+
+
+def get_dropbox_api_object():
+    """
+    Gets the dropbox object to use for the dropbox api
+
+    Returns
+    -------
+    dropbox.Dropbox
+        Dropbox object to use
+    """
+    access_token = os.environ["DROPBOX_ACCESS_TOKEN"]
+    dbx = dropbox.Dropbox(access_token)
+    return dbx
+
+
+def get_full_dropbox_path(run: str, file_name: str):
+    """
+    Gets the full path to the file on dropbox
+
+    Parameters
+    ----------
+    run : str
+        Name of the run e.g. v22p12
+    file_name : str
+        Name of the file e.g. Albury_IM.tar
+    """
+    return f"/{const.CYBERSHAKE_DIRECTORY.split(':')[-1]}/{run}/{file_name.split('_')[0]}/{file_name}"

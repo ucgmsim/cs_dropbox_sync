@@ -1,13 +1,11 @@
-import React, { useEffect, useState, memo } from "react";
+import React, { useEffect, useState, memo, useRef } from "react";
 import Select from "react-select";
 
-import { Runs } from "components";
+import { Runs, InstallCard } from "components";
 import * as CONSTANTS from "Constants";
 
 import "assets/Form.css";
-import { Button, ProgressBar } from "react-bootstrap";
-import { APIQueryBuilder } from "./Utils";
-import { downloadZip } from "https://cdn.jsdelivr.net/npm/client-zip/index.js";
+import { Button } from "react-bootstrap";
 
 const Form = () => {
   // Filters
@@ -30,15 +28,14 @@ const Form = () => {
   const [selectedRunData, setSelectedRunData] = useState([]);
 
   // Download Section
+  const [downloadAvailable, setDownloadAvailable] = useState(false);
   const [availableDataTypes, setAvailableDataTypes] = useState([]);
   const [selectedDataTypes, setSelectedDataTypes] = useState([]);
   const [availableFaults, setAvailableFaults] = useState([]);
   const [selectedFaults, setSelectedFaults] = useState([]);
-  const [formattedRemainingTime, setFormattedRemainingTime] = useState(null);
-  const [progress, setProgress] = useState(0);
-  const [progressWidth, setProgressWidth] = useState(0);
-
-  const FileSaver = require('file-saver');
+  const [downloadLinks, setDownloadLinks] = useState([]);
+  const [selectedTotalSize, setSelectedTotalSize] = useState(0);
+  const textAreaRef = useRef(null);
 
   // Get Grid Spacing filter on page load
   useEffect(() => {
@@ -161,6 +158,21 @@ const Form = () => {
     }
   }, [selectedRun]);
 
+  // Updates changes to file size shown when data types and faults change
+  useEffect(() => {
+    if (selectedDataTypes.length > 0 && selectedFaults.length > 0) {
+      let files = getSelectedFiles();
+      let totalBytes = 0;
+      for (const file of files) {
+        totalBytes += file["file_size"];
+      }
+      setSelectedTotalSize(totalBytes);
+      setDownloadAvailable(true);
+    } else {
+      setDownloadAvailable(false);
+    }
+  }, [selectedDataTypes, selectedFaults]);
+
   const onSelectGridSpacing = (e) => {
     setSelectedGridSpacings(e);
   };
@@ -173,13 +185,12 @@ const Form = () => {
     setSelectedTectonicTypes(e);
   };
 
-  const downloadData = () => {
-    // Downloads the data based on the selected preferences
+  const getSelectedFiles = () => {
+    // Gets the files that are selected based on the selected preferences
     // Get the strings of the selected data types
     const selectedDataTypeStrings = selectedDataTypes.map((item) => item.value);
 
-    let delay = 0;
-    let urls = [];
+    let files = [];
     // Loop over the selected Faults
     for (const fault of selectedFaults) {
       // Find the fault info in the selected run data
@@ -187,112 +198,46 @@ const Form = () => {
       // Loop over each file in the faultInfo and check if it matches the selected data types
       for (const file of Object.keys(faultInfo)) {
         if (selectedDataTypeStrings.some((item) => file.includes(item))) {
-          urls.push(faultInfo[file]);
+          files.push(faultInfo[file]);
         }
       }
     }
-    downloadAndZipFiles(urls);
+    return files;
   };
 
-  async function downloadAndZipFiles(files) {
-    // Downloads and zips the given files
-    const zipFiles = [];
-  
+  async function downloadFiles() {
+    // Downloads the files selected
+    let files = getSelectedFiles();
     const totalFiles = files.length;
-    let completedFiles = 0;
-    let totalBytes = 0;
-    let downloadedBytes = 0;
-    let startTime = new Date();
-    let averageDownloadSpeed = 14926; // Based on an average calculated before
-    let remainingTime = 0;
-    let cur_file_size = files[0]["file_size"];
-    let currentStepTime = startTime;
 
-    // Set the progress bar to 0
-    setProgress(0);
-
-    // Calculate totalBytes
-    for (const file of files) {
-      totalBytes += file["file_size"];
+    if (totalFiles === 1) {
+      setDownloadLinks([]);
+      const link = document.createElement("a");
+      // Just download the single file by itself
+      link.href = files[0]["download_link"];
+      link.download =
+        selectedRun +
+        "_" +
+        files[0]["download_link"].split("/").pop().split("?").shift();
+      link.click();
+      link.remove();
+    } else {
+      // Multiple files, but BB is one of them, so download them all separately using a download manager
+      setDownloadLinks(files.map((file) => file.download_link));
     }
-
-    const updateRemainingTime = () => {
-      const currentTime = new Date();
-      const elapsedTime = currentTime - startTime; // Time in milliseconds
-      const remainingBytes = totalBytes - (elapsedTime * averageDownloadSpeed);
-      remainingTime = remainingBytes / averageDownloadSpeed;
-
-      // Update the progress bar
-      let current_step = Math.round((completedFiles / totalFiles) * 100);
-      let next_step = Math.round(((completedFiles + 1) / totalFiles) * 100);
-      let estimated_completion = Math.min(averageDownloadSpeed * (currentTime- currentStepTime) / cur_file_size, 1);
-      setProgress(Math.round(current_step + (next_step - current_step) * estimated_completion));
-      console.log(current_step);
-      console.log(next_step);
-      console.log(estimated_completion);
-  
-      // Format the remaining time based on different units
-      if (remainingTime < 60000) {
-        setFormattedRemainingTime((remainingTime / 1000).toFixed(1) + ' seconds');
-      } else if (remainingTime < 3600000) {
-        const minutes = Math.floor(remainingTime / 60000);
-        const seconds = Math.floor((remainingTime % 60000) / 1000);
-        setFormattedRemainingTime(minutes + ' minutes ' + seconds + ' seconds');
-      } else {
-        const hours = Math.floor(remainingTime / 3600000);
-        const minutes = Math.floor((remainingTime % 3600000) / 60000);
-        setFormattedRemainingTime(hours + ' hours ' + minutes + ' minutes');
-      }
-    };
-
-    let updateInterval = setInterval(updateRemainingTime, 1000); // Update every 1 second
-  
-    for (const file of files) {
-      const url = file["download_link"];
-      const file_size = file["file_size"];
-      cur_file_size = file_size;
-      const filename = url.split('/').pop().split("?").shift();
-  
-      console.log("Downloading file: " + url);
-      const response = await fetch(url);
-      const content = await response.text();
-      console.log("Downloaded file: " + url);
-  
-      downloadedBytes += file_size;
-      const zipFile = {
-        name: filename,
-        lastModified: new Date(),
-        input: content
-      };
-      zipFiles.push(zipFile);
-      console.log("Zipped file: " + url);
-  
-      completedFiles++;
-      setProgress(Math.round((completedFiles / totalFiles) * 100));
-  
-      currentStepTime = new Date();
-      const elapsedTime = currentStepTime - startTime; // Time in milliseconds
-      averageDownloadSpeed = downloadedBytes / elapsedTime; // Update average download speed
-      console.log("Average download speed: " + averageDownloadSpeed + " bytes per millisecond");
-  
-      clearInterval(updateInterval); // Clear the interval before updating remainingTime
-      updateRemainingTime(); // Update remainingTime immediately after file download
-      updateInterval = setInterval(updateRemainingTime, 1000); // Resume the interval
-    }
-  
-    clearInterval(updateInterval); 
-  
-    // Generate the ZIP blob
-    let downloadStart = new Date();
-    const zipBlob = await downloadZip(zipFiles).blob();
-
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(zipBlob);
-    link.download = selectedRun + '.zip';
-    link.click();
-    link.remove();
-    console.log("Time taken for zip compression: " + (new Date() - downloadStart) + " milliseconds");
   }
+
+  const formatBytes = (bytes) => {
+    if (bytes === 0) {
+      return "0 B";
+    }
+
+    const sizes = ["B", "KB", "MB", "GB", "TB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    const formattedBytes = parseFloat((bytes / Math.pow(1024, i)).toFixed(1));
+
+    return `${formattedBytes} ${sizes[i]}`;
+  };
 
   return (
     <div className="border section">
@@ -364,34 +309,27 @@ const Form = () => {
             ></Select>
           </div>
         </div>
+        <p>Selected total file size: {formatBytes(selectedTotalSize)}</p>
         <Button
           variant="primary"
           size="lg"
+          disabled={!downloadAvailable}
           className="download-button"
-          onClick={downloadData}
+          onClick={downloadFiles}
         >
           Download
         </Button>
-        <ProgressBar now={progress} label={`${progress}%`} animated striped />
-        {/* <div
-        style={{
-          width: '100%',
-          height: '20px',
-          backgroundColor: '#eee',
-          borderRadius: '10px',
-          overflow: 'hidden',
-        }}
-      >
-        <div
-          style={{
-            width: `${progressWidth}%`,
-            height: '100%',
-            backgroundColor: '#007bff',
-            transition: 'width 300ms ease-in-out',
-          }}
-        />
-      </div> */}
-      <p>Estimated Time Remaining: {formattedRemainingTime}</p>
+        {downloadLinks.length > 0 && (
+          <div>
+            <InstallCard />
+            <textarea
+              ref={textAreaRef}
+              value={downloadLinks.join("\n")}
+              readOnly
+              style={{ position: "absolute", left: "-9999px" }}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

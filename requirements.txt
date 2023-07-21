@@ -1,8 +1,0 @@
-black
-pytest
-pytest-black
-pandas
-pyyaml
-flask
-flask_cors
-uwsgi

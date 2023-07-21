@@ -1,0 +1,71 @@
+v19p5:
+  grid: 400m
+  region: Whole Country
+  scientific_version: 18.6
+  tectonic_types:
+  - Shallow Crustal
+  - Volcanic
+v20p4:
+  grid: 400m
+  region: Whole Country
+  scientific_version: 20.4.1
+  tectonic_types:
+  - Shallow Crustal
+  - Volcanic
+v20p5:
+  grid: 400m
+  region: Subduction Faults
+  scientific_version: 20.4.1
+  tectonic_types:
+  - Subduction
+v20p6:
+  grid: 200m
+  region: Whole Country
+  scientific_version: 20.4.1
+  tectonic_types:
+  - Shallow Crustal
+  - Volcanic
+v20p9:
+  grid: 200m
+  region: Subduction Faults
+  scientific_version: 20.4.1
+  tectonic_types:
+  - Subduction
+v21p1:
+  grid: 100m
+  region: Partial South Island
+  scientific_version: 20.4.1
+  tectonic_types:
+  - Shallow Crustal
+  - Volcanic
+v21p6:
+  grid: 100m
+  region: Partial South Island
+  scientific_version: 20.4.1
+  tectonic_types:
+  - Shallow Crustal
+  - Volcanic
+v22p11:
+  grid: 100m
+  region: Wellington
+  scientific_version: 20.4.1
+  tectonic_types:
+  - Shallow Crustal
+v22p12:
+  grid: 100m
+  region: Wellington
+  scientific_version: 20.4.1
+  tectonic_types:
+  - Shallow Crustal
+v22p2:
+  grid: 100m
+  region: Partial South Island
+  scientific_version: 20.4.1
+  tectonic_types:
+  - Shallow Crustal
+v22p4:
+  grid: 100m
+  region: Partial South Island
+  scientific_version: 20.4.1
+  tectonic_types:
+  - Shallow Crustal

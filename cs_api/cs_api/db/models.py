@@ -94,7 +94,9 @@ class Run(db.Model):
                     data_type=data_type_str
                 ).first()
                 data_types_found.add(file_data_type)
-                file_path = dropbox_reading.get_full_dropbox_path(run_name, file_name.split("/")[1])
+                file_path = dropbox_reading.get_full_dropbox_path(
+                    run_name, file_name.split("/")[1]
+                )
                 file_obj = File(
                     file_name=file_name.split("/")[1],
                     download_link=dropbox_reading.get_download_link(file_path, dbx),

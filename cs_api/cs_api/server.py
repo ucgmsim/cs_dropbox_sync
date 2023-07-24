@@ -5,10 +5,11 @@ from pathlib import Path
 import flask
 from flask_sqlalchemy import SQLAlchemy
 
-from custom_log_handler import MultiProcessSafeTimedRotatingFileHandler
+from cs_api.custom_log_handler import MultiProcessSafeTimedRotatingFileHandler
 
 
 app = flask.Flask(str(Path(__file__).parent))
+app.app_context().push()
 
 logfile = os.path.join(os.path.dirname(__file__), "logs/logfile.log")
 os.makedirs(os.path.dirname(logfile), exist_ok=True)
@@ -34,5 +35,4 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db = SQLAlchemy(app)
 
 # Add the endpoints
-from api import metadata
-from api import runs
+from cs_api.api import metadata, runs

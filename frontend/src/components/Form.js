@@ -1,12 +1,11 @@
-import React, { useEffect, useState, memo } from "react";
+import React, { useEffect, useState, memo, useRef } from "react";
 import Select from "react-select";
 
-import { Runs } from "components";
+import { Runs, InstallCard } from "components";
 import * as CONSTANTS from "Constants";
 
 import "assets/Form.css";
 import { Button } from "react-bootstrap";
-import { APIQueryBuilder } from "./Utils";
 
 const Form = () => {
   // Filters
@@ -25,13 +24,18 @@ const Form = () => {
   const [shownRuns, setShownRuns] = useState([]);
   const [selectedRun, setSelectedRun] = useState([]);
   const [runData, setRunData] = useState([]);
+  const [runDataLookup, setRunDataLookup] = useState({});
   const [selectedRunData, setSelectedRunData] = useState([]);
 
   // Download Section
+  const [downloadAvailable, setDownloadAvailable] = useState(false);
   const [availableDataTypes, setAvailableDataTypes] = useState([]);
   const [selectedDataTypes, setSelectedDataTypes] = useState([]);
   const [availableFaults, setAvailableFaults] = useState([]);
   const [selectedFaults, setSelectedFaults] = useState([]);
+  const [downloadLinks, setDownloadLinks] = useState([]);
+  const [selectedTotalSize, setSelectedTotalSize] = useState(0);
+  const textAreaRef = useRef(null);
 
   // Get Grid Spacing filter on page load
   useEffect(() => {
@@ -84,23 +88,6 @@ const Form = () => {
     }
   }, [availableTectonicTypes]);
 
-  // Get Data Types on page load
-  useEffect(() => {
-    if (availableDataTypes.length === 0) {
-      fetch(CONSTANTS.CS_API_URL + CONSTANTS.GET_DATA_TYPES_ENDPOINT, {
-        method: "GET",
-      }).then(async (response) => {
-        const responseData = await response.json();
-        // Set Available Data Types Select Dropdown
-        let tempOptionArray = [];
-        for (const value of Object.values(responseData)) {
-          tempOptionArray.push({ value: value, label: value });
-        }
-        setAvailableDataTypes(tempOptionArray);
-      });
-    }
-  }, [availableDataTypes]);
-
   // Get Available Runs on page load
   useEffect(() => {
     if (availableRuns.length === 0) {
@@ -128,6 +115,64 @@ const Form = () => {
     }
   }, [availableRuns]);
 
+  // Update when the runData changes
+  useEffect(() => {
+    // Only update if the runData length has changed
+    if (runData.length !== Object.keys(runDataLookup).length) {
+      // Convert the runData array into a lookup table
+      const runDataLookupTemp = runData.reduce((lookup, run) => {
+        lookup[Object.keys(run)[0]] = Object.values(run)[0];
+        return lookup;
+      }, {});
+      setRunDataLookup(runDataLookupTemp);
+    }
+  }, [runData]);
+
+  // Change the download options when a run is selected
+  useEffect(() => {
+    if (selectedRun.length > 0) {
+      if (Object.keys(runDataLookup).length > 0) {
+        // Set the selected run data
+        setSelectedRunData(runDataLookup[selectedRun[0]]);
+
+        // Set Available Data Types Select Dropdown
+        let tempOptionArray = [];
+        for (const value of Object.values(
+          runDataLookup[selectedRun[0]]["data_types"]
+        )) {
+          tempOptionArray.push({ value: value, label: value });
+        }
+        setAvailableDataTypes(tempOptionArray);
+        // Set Available Faults Array
+        tempOptionArray = [];
+        for (const key of Object.keys(
+          runDataLookup[selectedRun[0]]["faults"]
+        )) {
+          tempOptionArray.push({ value: key, label: key });
+        }
+        setAvailableFaults(tempOptionArray);
+      } else {
+        setAvailableDataTypes([]);
+        setAvailableFaults([]);
+      }
+    }
+  }, [selectedRun]);
+
+  // Updates changes to file size shown when data types and faults change
+  useEffect(() => {
+    if (selectedDataTypes.length > 0 && selectedFaults.length > 0) {
+      let files = getSelectedFiles();
+      let totalBytes = 0;
+      for (const file of files) {
+        totalBytes += file["file_size"];
+      }
+      setSelectedTotalSize(totalBytes);
+      setDownloadAvailable(true);
+    } else {
+      setDownloadAvailable(false);
+    }
+  }, [selectedDataTypes, selectedFaults]);
+
   const onSelectGridSpacing = (e) => {
     setSelectedGridSpacings(e);
   };
@@ -138,6 +183,60 @@ const Form = () => {
 
   const onSelectTectonicType = (e) => {
     setSelectedTectonicTypes(e);
+  };
+
+  const getSelectedFiles = () => {
+    // Gets the files that are selected based on the selected preferences
+    // Get the strings of the selected data types
+    const selectedDataTypeStrings = selectedDataTypes.map((item) => item.value);
+
+    let files = [];
+    // Loop over the selected Faults
+    for (const fault of selectedFaults) {
+      // Find the fault info in the selected run data
+      const faultInfo = selectedRunData["faults"][fault.value];
+      // Loop over each file in the faultInfo and check if it matches the selected data types
+      for (const file of Object.keys(faultInfo)) {
+        if (selectedDataTypeStrings.some((item) => file.includes(item))) {
+          files.push(faultInfo[file]);
+        }
+      }
+    }
+    return files;
+  };
+
+  async function downloadFiles() {
+    // Downloads the files selected
+    let files = getSelectedFiles();
+    const totalFiles = files.length;
+
+    if (totalFiles === 1) {
+      setDownloadLinks([]);
+      const link = document.createElement("a");
+      // Just download the single file by itself
+      link.href = files[0]["download_link"];
+      link.download =
+        selectedRun +
+        "_" +
+        files[0]["download_link"].split("/").pop().split("?").shift();
+      link.click();
+      link.remove();
+    } else {
+      // Multiple files, but BB is one of them, so download them all separately using a download manager
+      setDownloadLinks(files.map((file) => file.download_link));
+    }
+  }
+
+  const formatBytes = (bytes) => {
+    if (bytes === 0) {
+      return "0 B";
+    }
+
+    const sizes = ["B", "KB", "MB", "GB", "TB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    const formattedBytes = parseFloat((bytes / Math.pow(1024, i)).toFixed(1));
+
+    return `${formattedBytes} ${sizes[i]}`;
   };
 
   return (
@@ -181,7 +280,7 @@ const Form = () => {
         <div className="border run-cards-section">
           <Runs
             viewRuns={shownRuns}
-            runData={runData}
+            runData={runDataLookup}
             setRun={setSelectedRun}
           />
         </div>
@@ -210,9 +309,27 @@ const Form = () => {
             ></Select>
           </div>
         </div>
-        <Button variant="primary" size="lg" className="download-button">
+        <p>Selected total file size: {formatBytes(selectedTotalSize)}</p>
+        <Button
+          variant="primary"
+          size="lg"
+          disabled={!downloadAvailable}
+          className="download-button"
+          onClick={downloadFiles}
+        >
           Download
         </Button>
+        {downloadLinks.length > 0 && (
+          <div>
+            <InstallCard />
+            <textarea
+              ref={textAreaRef}
+              value={downloadLinks.join("\n")}
+              readOnly
+              style={{ position: "absolute", left: "-9999px" }}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

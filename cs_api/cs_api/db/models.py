@@ -1,5 +1,8 @@
 from cs_api.server import db
 
+from cs_api import constants as const
+from dropbox_rclone import dropbox_reading
+
 
 run_tecttypes = db.Table(
     "run_tecttypes",
@@ -52,6 +55,65 @@ class Run(db.Model):
     tect_types = db.relationship("TectType", secondary=run_tecttypes, backref="runs")
     data_types = db.relationship("DataType", secondary=run_datatypes, backref="runs")
     faults = db.relationship("Fault", secondary=run_faults, backref="runs")
+
+    def __init__(self, run_name, run_info):
+        """
+        Create a run object from a run name
+        from extracting the data from dropbox
+
+        Parameters
+        ----------
+        run_name : str
+            Name of the run
+        run_info : dict
+            Dictionary of run metadata information from the yaml file
+        """
+        faults = dropbox_reading.get_run_info(run_name)
+        dbx = dropbox_reading.get_dropbox_api_object()
+        self.run_name = run_name
+        self.n_faults = len(faults)
+        self.region = run_info["region"]
+        self.grid_spacing = GridSpacing.query.filter_by(
+            grid_spacing=run_info["grid"]
+        ).first()
+        self.scientific_version = ScientificVersion.query.filter_by(
+            scientific_version=str(run_info["scientific_version"])
+        ).first()
+        self.tect_types = [
+            TectType.query.filter_by(tect_type=tect_type).first()
+            for tect_type in run_info["tectonic_types"]
+        ]
+        # Create each fault for the run
+        data_types_found = set()
+        run_faults_list = []
+        for fault, files in faults.items():
+            fault_files_list = []
+            for file_name, file_size in files.items():
+                data_type_str = file_name.split(".")[0].split("_")[1]
+                file_data_type = DataType.query.filter_by(
+                    data_type=data_type_str
+                ).first()
+                data_types_found.add(file_data_type)
+                file_path = dropbox_reading.get_full_dropbox_path(
+                    run_name, file_name.split("/")[1]
+                )
+                file_obj = File(
+                    file_name=file_name.split("/")[1],
+                    download_link=dropbox_reading.get_download_link(file_path, dbx),
+                    file_size=file_size,
+                    data_type=file_data_type,
+                )
+                fault_files_list.append(file_obj)
+                db.session.add(file_obj)
+            fault_obj = Fault(
+                fault_name=fault,
+                run=self,
+                files=fault_files_list,
+            )
+            run_faults_list.append(fault_obj)
+            db.session.add(fault_obj)
+        self.data_types = list(data_types_found)
+        self.faults = run_faults_list
 
 
 class Fault(db.Model):

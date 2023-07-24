@@ -2,24 +2,11 @@ import React, { useEffect, useState, memo } from "react";
 import { Card, Placeholder } from "react-bootstrap";
 
 import * as CONSTANTS from "Constants";
+import { RunCard } from "components";
 
 import "assets/Runs.css";
 
 const Runs = ({ viewRuns, runData, setRun }) => {
-  const [loadedRunData, setLoadedRunData] = useState([]);
-
-  // Update when the runData changes
-  useEffect(() => {
-    // Only update if the runData length has changed
-    if (runData.length !== loadedRunData.length) {
-      // Convert the runData array into a lookup table
-      const runDataLookup = runData.reduce((lookup, run) => {
-        lookup[Object.keys(run)[0]] = Object.values(run)[0];
-        return lookup;
-      }, {});
-      setLoadedRunData(runDataLookup);
-    }
-  }, [runData]);
 
   const loadingPlaceholder = (
     <Placeholder as={Card.Text} animation="glow" xs={12}>
@@ -41,36 +28,13 @@ const Runs = ({ viewRuns, runData, setRun }) => {
       <div className="sub-section run-card-holder">
         {viewRuns.map(function (run, i) {
           return (
-            <Card className="run-card" key={i}>
-              <Card.Body className="run-card-body">
-                <Card.Title className="run-card-title">{run.value}</Card.Title>
-                {loadedRunData[run.value] && (
-                  <Card.Text className="run-card-info-text">
-                    <b>Number of Faults:</b>{" "}
-                    {loadedRunData[run.value]["card_info"]["n_faults"]}
-                    <br />
-                    <b>Region:</b>{" "}
-                    {loadedRunData[run.value]["card_info"]["region"]}
-                    <br />
-                    <b>Grid Spacing:</b>{" "}
-                    {loadedRunData[run.value]["card_info"]["grid_spacing"]}
-                    <br />
-                    <b>Scientific Version:</b>{" "}
-                    {
-                      loadedRunData[run.value]["card_info"][
-                        "scientific_version"
-                      ]
-                    }
-                    <br />
-                    <b>Tectonic Types:</b>{" "}
-                    {loadedRunData[run.value]["card_info"][
-                      "tectonic_types"
-                    ].join(", ")}
-                  </Card.Text>
-                )}
-                {!loadedRunData[run.value] && loadingPlaceholder}
-              </Card.Body>
-            </Card>
+            <RunCard
+              key={i}
+              runData={runData[run.value]}
+              setRun={setRun}
+              runName={run.value}
+              loadingPlaceholder={loadingPlaceholder}
+            />
           );
         })}
       </div>

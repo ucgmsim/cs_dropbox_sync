@@ -144,7 +144,7 @@ const Form = () => {
         }
         setAvailableDataTypes(tempOptionArray);
         // Set Available Faults Array
-        tempOptionArray = [];
+        tempOptionArray = [{value: "all_faults", label: "All Faults"}];
         for (const key of Object.keys(
           runDataLookup[selectedRun[0]]["faults"]
         )) {
@@ -170,6 +170,7 @@ const Form = () => {
       setDownloadAvailable(true);
     } else {
       setDownloadAvailable(false);
+      setSelectedTotalSize(0);
     }
   }, [selectedDataTypes, selectedFaults]);
 
@@ -239,6 +240,17 @@ const Form = () => {
     return `${formattedBytes} ${sizes[i]}`;
   };
 
+  const onSelectFault = (selectedOption) => {
+    console.log(selectedOption);
+    if (selectedOption.some((item) => item.value === "all_faults")) {
+      let tempFaults = availableFaults.filter((fault) => fault.value !== 'all_faults');
+      console.log(tempFaults);
+      setSelectedFaults(tempFaults);
+    } else {
+      setSelectedFaults(selectedOption);
+    }
+  };
+
   return (
     <div className="border section">
       <div className="sub-section">
@@ -305,7 +317,8 @@ const Form = () => {
               isMulti={true}
               options={availableFaults}
               isDisabled={availableFaults.length === 0}
-              onChange={(e) => setSelectedFaults(e)}
+              onChange={(e) => onSelectFault(e)}
+              value={selectedFaults}
             ></Select>
           </div>
         </div>

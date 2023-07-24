@@ -82,12 +82,16 @@ def get_download_link(file_path: str, dbx: dropbox.Dropbox):
     try:
         # If no link was found, create a new one
         shared_link = dbx.sharing_create_shared_link_with_settings(file_path)
-        download_link = shared_link.url.replace("www.dropbox.com", "dl.dropboxusercontent.com")
+        download_link = shared_link.url.replace(
+            "www.dropbox.com", "dl.dropboxusercontent.com"
+        )
     except dropbox.exceptions.ApiError as e:
         shared_links = dbx.sharing_list_shared_links(file_path).links
         for link in shared_links:
             if link.path_lower == file_path.lower():
-                download_link = link.url.replace("www.dropbox.com", "dl.dropboxusercontent.com")
+                download_link = link.url.replace(
+                    "www.dropbox.com", "dl.dropboxusercontent.com"
+                )
     if download_link is None:
         raise Exception("Could not find download link for file")
     return download_link

@@ -45,10 +45,7 @@ for data_type in DEFAULT_DATA_TYPES:
 # Add the runs and all their fault information to the database
 for run, run_info in run_metadata.items():
     print(f"Adding run {run} to the database")
-    run_obj = Run(
-        run_name=run,
-        run_info=run_info
-    )
+    run_obj = Run(run_name=run, run_info=run_info)
     db.session.add(run_obj)
 
 db.session.commit()

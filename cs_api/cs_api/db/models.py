@@ -41,16 +41,14 @@ class Run(db.Model):
         db.String(100),
         unique=True,
     )
+    type_id = db.Column(db.Integer, db.ForeignKey("run_types.id"))
+    type = db.relationship("RunType")
 
     n_faults = db.Column(db.Integer)
     region = db.Column(db.String(100))
 
     grid_spacing_id = db.Column(db.Integer, db.ForeignKey("grid_spacings.id"))
     grid_spacing = db.relationship("GridSpacing")
-    scientific_version_id = db.Column(
-        db.Integer, db.ForeignKey("scientific_versions.id")
-    )
-    scientific_version = db.relationship("ScientificVersion")
 
     tect_types = db.relationship("TectType", secondary=run_tecttypes, backref="runs")
     data_types = db.relationship("DataType", secondary=run_datatypes, backref="runs")
@@ -66,7 +64,7 @@ class Run(db.Model):
         run_name : str
             Name of the run
         run_info : dict
-            Dictionary of run metadata information from the yaml file
+            Dictionary of run metadata information
         """
         faults = dropbox_reading.get_run_info(run_name)
         dbx = dropbox_reading.get_dropbox_api_object()
@@ -76,8 +74,8 @@ class Run(db.Model):
         self.grid_spacing = GridSpacing.query.filter_by(
             grid_spacing=run_info["grid"]
         ).first()
-        self.scientific_version = ScientificVersion.query.filter_by(
-            scientific_version=str(run_info["scientific_version"])
+        self.type = RunType.query.filter_by(
+            type=str(run_info["type"])
         ).first()
         self.tect_types = [
             TectType.query.filter_by(tect_type=tect_type).first()
@@ -166,7 +164,7 @@ class GridSpacing(db.Model):
     grid_spacing = db.Column(db.String(100), unique=True)
 
 
-class ScientificVersion(db.Model):
-    __tablename__ = "scientific_versions"
+class RunType(db.Model):
+    __tablename__ = "run_types"
     id = db.Column(db.Integer, primary_key=True)
-    scientific_version = db.Column(db.String(100), unique=True)
+    type = db.Column(db.String(100), unique=True)

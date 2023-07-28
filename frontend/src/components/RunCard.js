@@ -5,7 +5,7 @@ import * as CONSTANTS from "Constants";
 
 import "assets/RunCard.css";
 
-const RunCard = ({ runData, setRun, runName, loadingPlaceholder }) => {
+const RunCard = ({ runData, setRun, runName, loadingPlaceholder, active }) => {
 
   const handleClick = () => {
     // Sets the select run in the Form component
@@ -14,9 +14,11 @@ const RunCard = ({ runData, setRun, runName, loadingPlaceholder }) => {
 
 
   return (
-    <Card className="run-card" onClick={handleClick}>
+    <Card className={'run-card ' +  (active ? "run-card-active" : "run-card")} onClick={handleClick}>
       <Card.Body className="run-card-body">
-        <Card.Title className="run-card-title">{runName}</Card.Title>
+        {runData && (<Card.Title className="run-card-title">{runData["card_info"]["run_type"]}</Card.Title>)}
+        {!runData && (<Card.Title className="run-card-title"><Placeholder as={Card.Title} animation="glow" xs={12}></Placeholder></Card.Title>)}
+        <Card.Title className="run-card-sub-title">{runName}</Card.Title>
         {runData && (
           <Card.Text className="run-card-info-text">
             <b>Number of Faults:</b>{" "}
@@ -26,9 +28,6 @@ const RunCard = ({ runData, setRun, runName, loadingPlaceholder }) => {
             <br />
             <b>Grid Spacing:</b>{" "}
             {runData["card_info"]["grid_spacing"]}
-            <br />
-            <b>Scientific Version:</b>{" "}
-            {runData["card_info"]["scientific_version"]}
             <br />
             <b>Tectonic Types:</b>{" "}
             {runData["card_info"]["tectonic_types"].join(", ")}

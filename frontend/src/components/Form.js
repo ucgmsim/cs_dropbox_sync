@@ -3,19 +3,18 @@ import Select from "react-select";
 
 import { Runs, InstallCard } from "components";
 import * as CONSTANTS from "Constants";
+import { MultiSelect } from "react-multi-select-component";
 
 import "assets/Form.css";
+import "assets/Popup.css";
 import { Button } from "react-bootstrap";
 
 const Form = () => {
   // Filters
   const [availableGridSpacings, setAvailableGridSpacings] = useState([]);
   const [selectedGridSpacings, setSelectedGridSpacings] = useState([]);
-  const [availableScientificVersions, setAvailableScientificVersions] =
-    useState([]);
-  const [selectedScientificVersions, setSelectedScientificVersions] = useState(
-    []
-  );
+  const [availableRunTypes, setAvailableRunTypes] = useState([]);
+  const [selectedRunTypes, setSelectedRunType] = useState([]);
   const [availableTectonicTypes, setAvailableTectonicTypes] = useState([]);
   const [selectedTectonicTypes, setSelectedTectonicTypes] = useState([]);
 
@@ -35,6 +34,7 @@ const Form = () => {
   const [selectedFaults, setSelectedFaults] = useState([]);
   const [downloadLinks, setDownloadLinks] = useState([]);
   const [selectedTotalSize, setSelectedTotalSize] = useState(0);
+  const [showDownloadPopup, setShowDownloadPopup] = useState(false);
   const textAreaRef = useRef(null);
 
   // Get Grid Spacing filter on page load
@@ -54,22 +54,27 @@ const Form = () => {
     }
   }, [availableGridSpacings]);
 
-  // Get Scientific Version filter on page load
+  const options = [
+    { label: 'Thing 1', value: 1},
+    { label: 'Thing 2', value: 2},
+  ];
+
+  // Get Run Type filter on page load
   useEffect(() => {
-    if (availableScientificVersions.length === 0) {
-      fetch(CONSTANTS.CS_API_URL + CONSTANTS.GET_SCIENTIFIC_VERSION_ENDPOINT, {
+    if (availableRunTypes.length === 0) {
+      fetch(CONSTANTS.CS_API_URL + CONSTANTS.GET_RUN_TYPES_ENDPOINT, {
         method: "GET",
       }).then(async (response) => {
         const responseData = await response.json();
-        // Set Available Scientific Version Select Dropdown
+        // Set Available Run Types for the Select Dropdown
         let tempOptionArray = [];
         for (const value of Object.values(responseData)) {
           tempOptionArray.push({ value: value, label: value });
         }
-        setAvailableScientificVersions(tempOptionArray);
+        setAvailableRunTypes(tempOptionArray);
       });
     }
-  }, [availableScientificVersions]);
+  }, [availableRunTypes]);
 
   // Get Tectonic Types filter on page load
   useEffect(() => {
@@ -144,7 +149,7 @@ const Form = () => {
         }
         setAvailableDataTypes(tempOptionArray);
         // Set Available Faults Array
-        tempOptionArray = [{value: "all_faults", label: "All Faults"}];
+        tempOptionArray = [];
         for (const key of Object.keys(
           runDataLookup[selectedRun[0]]["faults"]
         )) {
@@ -174,18 +179,6 @@ const Form = () => {
     }
   }, [selectedDataTypes, selectedFaults]);
 
-  const onSelectGridSpacing = (e) => {
-    setSelectedGridSpacings(e);
-  };
-
-  const onSelectScientificVersion = (e) => {
-    setSelectedScientificVersions(e);
-  };
-
-  const onSelectTectonicType = (e) => {
-    setSelectedTectonicTypes(e);
-  };
-
   const getSelectedFiles = () => {
     // Gets the files that are selected based on the selected preferences
     // Get the strings of the selected data types
@@ -213,6 +206,7 @@ const Form = () => {
 
     if (totalFiles === 1) {
       setDownloadLinks([]);
+      setShowDownloadPopup(false);
       const link = document.createElement("a");
       // Just download the single file by itself
       link.href = files[0]["download_link"];
@@ -225,6 +219,7 @@ const Form = () => {
     } else {
       // Multiple files, but BB is one of them, so download them all separately using a download manager
       setDownloadLinks(files.map((file) => file.download_link));
+      setShowDownloadPopup(true);
     }
   }
 
@@ -240,16 +235,17 @@ const Form = () => {
     return `${formattedBytes} ${sizes[i]}`;
   };
 
-  const onSelectFault = (selectedOption) => {
-    console.log(selectedOption);
-    if (selectedOption.some((item) => item.value === "all_faults")) {
-      let tempFaults = availableFaults.filter((fault) => fault.value !== 'all_faults');
-      console.log(tempFaults);
-      setSelectedFaults(tempFaults);
-    } else {
-      setSelectedFaults(selectedOption);
-    }
+  const onCloseDownloadPopup = () => {
+    setShowDownloadPopup(false);
   };
+
+  const onSelectRun = (e) => {
+    if (e[0][0].localeCompare(selectedRun[0])) {
+      setSelectedRun(e[0]);
+      setSelectedDataTypes([]);
+      setSelectedFaults([]);
+    }
+  }
 
   return (
     <div className="border section">
@@ -263,17 +259,17 @@ const Form = () => {
               isMulti={true}
               options={availableGridSpacings}
               isDisabled={availableGridSpacings.length === 0}
-              onChange={(e) => onSelectGridSpacing(e)}
+              onChange={(e) => setSelectedGridSpacings(e)}
             ></Select>
           </div>
           <div className="col-4">
             <Select
               className="select-box"
-              placeholder="Scientific Version"
+              placeholder="Run Type"
               isMulti={true}
-              options={availableScientificVersions}
-              isDisabled={availableScientificVersions.length === 0}
-              onChange={(e) => onSelectScientificVersion(e)}
+              options={availableRunTypes}
+              isDisabled={availableRunTypes.length === 0}
+              onChange={(e) => setSelectedRunType(e)}
             ></Select>
           </div>
           <div className="col-4">
@@ -283,7 +279,7 @@ const Form = () => {
               isMulti={true}
               options={availableTectonicTypes}
               isDisabled={availableTectonicTypes.length === 0}
-              onChange={(e) => onSelectTectonicType(e)}
+              onChange={(e) => setSelectedTectonicTypes(e)}
             ></Select>
           </div>
         </div>
@@ -293,7 +289,7 @@ const Form = () => {
           <Runs
             viewRuns={shownRuns}
             runData={runDataLookup}
-            setRun={setSelectedRun}
+            setRun={onSelectRun}
           />
         </div>
       </div>
@@ -306,20 +302,22 @@ const Form = () => {
               placeholder="Data Types"
               isMulti={true}
               options={availableDataTypes}
+              value={selectedDataTypes}
               isDisabled={availableDataTypes.length === 0}
               onChange={(e) => setSelectedDataTypes(e)}
             ></Select>
           </div>
           <div className="col-4">
-            <Select
-              className="select-box"
-              placeholder="Faults"
-              isMulti={true}
+            <MultiSelect
               options={availableFaults}
               isDisabled={availableFaults.length === 0}
-              onChange={(e) => onSelectFault(e)}
               value={selectedFaults}
-            ></Select>
+              onChange={(e) => setSelectedFaults(e)}
+              overrideStrings={{
+                "allItemsAreSelected": "All faults",
+                "selectSomeItems": "Select Faults"
+              }}
+            />
           </div>
         </div>
         <p>Selected total file size: {formatBytes(selectedTotalSize)}</p>
@@ -334,7 +332,22 @@ const Form = () => {
         </Button>
         {downloadLinks.length > 0 && (
           <div>
-            <InstallCard />
+            <Button
+              variant="primary"
+              size="lg"
+              className="download-button"
+              onClick={setShowDownloadPopup(true)}
+            >
+              Show Download Instructions
+            </Button>
+            {showDownloadPopup && <div className="popup-overlay">
+              <div className="popup-content">
+                <InstallCard />
+                <button className="close-button" onClick={onCloseDownloadPopup}>
+                  Close
+                </button>
+              </div>
+            </div>}
             <textarea
               ref={textAreaRef}
               value={downloadLinks.join("\n")}

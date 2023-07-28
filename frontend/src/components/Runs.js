@@ -23,6 +23,14 @@ const Runs = ({ viewRuns, runData, setRun }) => {
     </Placeholder>
   );
 
+  const [selectedRun, setSelectedRun] = useState([]);
+
+  const handleClick = (runName) => {
+    // Sets the select run in the Form component
+    setRun([runName]);
+    setSelectedRun(runName);
+  }
+
   if (viewRuns.length > 0) {
     return (
       <div className="sub-section run-card-holder">
@@ -31,9 +39,10 @@ const Runs = ({ viewRuns, runData, setRun }) => {
             <RunCard
               key={i}
               runData={runData[run.value]}
-              setRun={setRun}
+              setRun={handleClick}
               runName={run.value}
               loadingPlaceholder={loadingPlaceholder}
+              active={selectedRun[0] === run.value}
             />
           );
         })}
@@ -48,6 +57,9 @@ const Runs = ({ viewRuns, runData, setRun }) => {
             <Card className="run-card" key={i}>
               <Card.Body className="run-card-body">
                 <Card.Title className="run-card-title">
+                  <Placeholder as={Card.Title} animation="glow" xs={12}>
+                    <Placeholder xs={12} size={"lg"} bg="secondary" />{" "}
+                  </Placeholder>
                   <Placeholder as={Card.Title} animation="glow" xs={12}>
                     <Placeholder xs={12} size={"lg"} bg="secondary" />{" "}
                   </Placeholder>

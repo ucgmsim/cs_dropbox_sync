@@ -3,7 +3,7 @@ from pathlib import Path
 # Metadata endpoints
 GET_TECTONIC_TYPES = "/meta/tec_types"
 GET_GRID_SPACING = "/meta/grid_spacing"
-GET_SCIENTIFIC_VERSION = "/meta/scientific_version"
+GET_RUN_TYPES = "/meta/run_types"
 GET_DATA_TYPES = "/meta/data_types"
 
 # Run endpoints

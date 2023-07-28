@@ -8,6 +8,7 @@ from dropbox_rclone import dropbox_reading
 from cs_api.db.models import *
 
 DEFAULT_DATA_TYPES = ["BB", "IM", "Source"]
+DEFAULT_RUN_TYPES = ["Cybershake", "Historical"]
 
 # Add db.drop_all() if you want to drop all tables and start from scratch
 db.drop_all()
@@ -32,10 +33,9 @@ grid_spacings = {run["grid"] for run in run_metadata.values()}
 for grid_spacing in grid_spacings:
     db.session.add(GridSpacing(grid_spacing=grid_spacing))
 
-# Add the scientific versions to the database
-scientific_versions = {str(run["scientific_version"]) for run in run_metadata.values()}
-for scientific_version in scientific_versions:
-    db.session.add(ScientificVersion(scientific_version=scientific_version))
+# Add the run types to the database
+for run_type in DEFAULT_RUN_TYPES:
+    db.session.add(RunType(type=run_type))
 
 # Add the data types to the database
 for data_type in DEFAULT_DATA_TYPES:

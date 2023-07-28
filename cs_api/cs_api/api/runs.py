@@ -43,8 +43,8 @@ def get_full_run_info():
         )
         run_info[run_name]["card_info"]["grid_spacing"] = run.grid_spacing.grid_spacing
         run_info[run_name]["card_info"][
-            "scientific_version"
-        ] = run.scientific_version.scientific_version
+            "run_type"
+        ] = run.type.type
         run_info[run_name]["card_info"]["n_faults"] = len(run.faults)
 
         # Add data types available such as BB, IM, Source

@@ -6,7 +6,7 @@ export const CS_API_URL = process.env.REACT_APP_CS_API_URL;
 // Metadata Endpoints
 export const GET_TECTONIC_TYPES_ENDPOINT = "/meta/tec_types";
 export const GET_GRID_SPACING_ENDPOINT = "/meta/grid_spacing";
-export const GET_SCIENTIFIC_VERSION_ENDPOINT = "/meta/scientific_version";
+export const GET_RUN_TYPES_ENDPOINT = "/meta/run_types";
 export const GET_DATA_TYPES_ENDPOINT = "/meta/data_types";
 
 // Run Endpoints

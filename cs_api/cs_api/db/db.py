@@ -29,15 +29,15 @@ def get_grid_spacings():
     )
 
 
-def get_scientific_versions():
+def get_run_types():
     """
-    Get the scientific versions from the database
-    :return: list of scientific versions
+    Get the run types aviailable from the database
+    :return: list of different run types e.g. (Historical, Cybershake)
     """
     return sorted(
         [
-            scientific_version.scientific_version
-            for scientific_version in ScientificVersion.query.all()
+            run_type.type
+            for run_type in RunType.query.all()
         ]
     )
 

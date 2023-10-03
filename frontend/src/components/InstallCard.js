@@ -4,8 +4,9 @@ import step2 from "assets/images/step2.png";
 import step3 from "assets/images/step3.png";
 import step4 from "assets/images/step4.png";
 import step5 from "assets/images/step5.png";
+import {Button} from "react-bootstrap";
 
-const InstallCard = () => {
+const InstallCard = ({onClose}) => {
   const userAgent = navigator.userAgent.toLowerCase();
 
   const getInstallationLink = () => {
@@ -46,25 +47,38 @@ const InstallCard = () => {
 
   return (
     <div className="installation-card">
-      <h2 className="installation-card__title">
-        Download using DownThemAll Extension
-      </h2>
-      <p className="installation-card__description">
-        Downloading multiple files from websites can be challenging with some
-        browsers. The DownThemAll extension provides a convenient solution by
-        allowing you to download multiple files effortlessly. Follow the steps
-        below to install the extension in your preferred browser and use it to
-        download the files.
-      </p>
+      <div className="title_description">
+        <div className="top-bar">
+          <h2 className="installation-card__title">
+            Download using DownThemAll Extension
+          </h2>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="close-button"
+            onClick={onClose}
+          >
+            Close
+          </Button>
+        </div>
+
+        <p className="installation-card__description">
+          Downloading multiple files from websites can be challenging with some
+          browsers. The DownThemAll extension provides a convenient solution by
+          allowing you to download multiple files effortlessly. Follow the steps
+          below to install the extension in your preferred browser and use it to
+          download the files.
+        </p>
+      </div>
       <div className="installation-steps">
-        <div className="installation-step">
+        <div className="installation-step row_1">
           <div className="installation-step__content">
             <h3>Step 1:</h3>
             <h3>Install Extension</h3>
             <p>{renderInstallationLink()}</p>
           </div>
         </div>
-        <div className="installation-step">
+        <div className="installation-step row_1">
           <div className="installation-step__content">
             <h3>Step 2:</h3>
             <h3>Activate Extension</h3>
@@ -75,7 +89,7 @@ const InstallCard = () => {
             <img src={step2} alt="Extension Screenshot" />
           </div>
         </div>
-        <div className="installation-step">
+        <div className="installation-step row_1">
           <div className="installation-step__content">
             <h3>Step 3:</h3>
             <h3>Select All Files</h3>
@@ -86,7 +100,7 @@ const InstallCard = () => {
             <img src={step3} alt="Select All File Screenshot" />
           </div>
         </div>
-        <div className="installation-step">
+        <div className="installation-step row_2">
           <div className="installation-step__content">
             <h3>Step 4:</h3>
             <h3>Download</h3>
@@ -98,7 +112,7 @@ const InstallCard = () => {
             <img src={step4} alt="Download Screenshot" />
           </div>
         </div>
-        <div>
+        <div className="installation-step row_3">
           <div className="installation-step__content">
             <h3>Step 5:</h3>
             <h3>Download Manager</h3>

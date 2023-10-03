@@ -1,7 +1,6 @@
-import React, { useEffect, useState, memo } from "react";
+import React, {useEffect, useState, memo } from "react";
 import { Card, Placeholder } from "react-bootstrap";
 
-import * as CONSTANTS from "Constants";
 import { RunCard } from "components";
 
 import "assets/Runs.css";
@@ -18,8 +17,6 @@ const Runs = ({ viewRuns, runData, setRun }) => {
       <Placeholder xs={4} size={"sm"} bg="secondary" />
       <Placeholder xs={8} size={"sm"} bg="secondary" />{" "}
       <Placeholder xs={3} size={"sm"} bg="secondary" />
-      <Placeholder xs={7} size={"sm"} bg="secondary" />{" "}
-      <Placeholder xs={4} size={"sm"} bg="secondary" />
     </Placeholder>
   );
 
@@ -31,7 +28,7 @@ const Runs = ({ viewRuns, runData, setRun }) => {
     setSelectedRun(runName);
   }
 
-  if (viewRuns.length > 0) {
+  if (Object.keys(runData).length > 0) {
     return (
       <div className="sub-section run-card-holder">
         {viewRuns.map(function (run, i) {
@@ -41,7 +38,6 @@ const Runs = ({ viewRuns, runData, setRun }) => {
               runData={runData[run.value]}
               setRun={handleClick}
               runName={run.value}
-              loadingPlaceholder={loadingPlaceholder}
               active={selectedRun[0] === run.value}
             />
           );

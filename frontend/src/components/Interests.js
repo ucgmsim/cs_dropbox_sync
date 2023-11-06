@@ -56,7 +56,6 @@ const Interests = ({setInterest}) => {
   }
 
   const skipAndBrowseDatasets = () => {
-    // setInterest([{"sites": []}], [{"sources": []}]);
     setInterest([], []);
   }
 

@@ -1,0 +1,12 @@
+.download-selects {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.download-select-box {
+    width: 20vw;
+    margin: 2.5vh;
+}

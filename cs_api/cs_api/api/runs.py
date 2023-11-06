@@ -1,22 +1,9 @@
 import flask
-import yaml
 from flask_cors import cross_origin
 
 from cs_api import server, utils
 from cs_api import constants as const
 from cs_api.db import db
-
-
-@server.app.route(const.GET_AVAILABLE_RUNS, methods=["GET"])
-@cross_origin(expose_headers=["Content-Type", "Authorization"])
-@utils.endpoint_exception_handling(server.app)
-def get_available_runs():
-    """
-    Gets all the available runs on dropbox
-    """
-    server.app.logger.info(f"Received request at {const.GET_AVAILABLE_RUNS}")
-    available_runs = db.get_available_run_names()
-    return flask.jsonify(available_runs)
 
 
 @server.app.route(const.GET_RUN_INFO, methods=["GET"])
@@ -71,3 +58,35 @@ def get_full_run_info():
         run_infos.append(run_info)
 
     return flask.jsonify(run_infos)
+
+
+@server.app.route(const.GET_RUNS_FROM_INTERESTS, methods=["GET"])
+@cross_origin(expose_headers=["Content-Type", "Authorization"])
+@utils.endpoint_exception_handling(server.app)
+def get_runs_from_interests():
+    """
+    Gets all run names that contain the given interests of Sites or Sources
+    """
+    filter_by, filter_list = utils.get_check_keys(
+        flask.request.args,
+        ("filter_by", "filter_list"),
+    )
+    filter_list = filter_list.split(",")
+    filtered_runs = []
+    available_runs = db.get_available_runs()
+    for run in available_runs:
+        if filter_by == "sources":
+            for fault in run.faults:
+                if fault.fault_name in filter_list:
+                    filtered_runs.append(run.run_name)
+                    break
+        elif filter_by == "sites":
+            for site in run.sites:
+                if site.site_name in filter_list:
+                    filtered_runs.append(run.run_name)
+                    break
+        else:
+            raise ValueError(
+                f"filter_by parameter must be either 'sources' or 'sites', not {filter_by}"
+            )
+    return flask.jsonify(filtered_runs)

@@ -58,6 +58,25 @@ def get_available_runs():
     return Run.query.all()
 
 
+def get_all_unique_faults():
+    """
+    Get all the unique faults from the database
+    :return: list of unique faults
+    """
+    faults = Fault.query.all()
+    unique_faults = {fault.fault_name for fault in faults}
+    return sorted(list(unique_faults))
+
+
+def get_all_unique_sites():
+    """
+    Get all the unique sites from the database
+    :return: list of unique sites
+    """
+    sites = Site.query.all()
+    unique_sites = {site.site_name for site in sites}
+    return sorted(list(unique_sites))
+
 def add_run(run: Run):
     """
     Add a run to the database

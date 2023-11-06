@@ -39,12 +39,25 @@ def get_run_types():
     return flask.jsonify(db.get_run_types())
 
 
-@server.app.route(const.GET_DATA_TYPES, methods=["GET"])
+@server.app.route(const.GET_UNIQUE_FAULTS, methods=["GET"])
 @cross_origin(expose_headers=["Content-Type", "Authorization"])
 @utils.endpoint_exception_handling(server.app)
-def get_data_types():
+def get_all_unique_faults():
     """
-    Gets the data types from the db
+    Gets all the unique faults from every run on dropbox
     """
-    server.app.logger.info(f"Received request at {const.GET_DATA_TYPES}")
-    return flask.jsonify(db.get_data_types())
+    server.app.logger.info(f"Received request at {const.GET_UNIQUE_FAULTS}")
+    unique_faults = db.get_all_unique_faults()
+    return flask.jsonify(unique_faults)
+
+
+@server.app.route(const.GET_UNIQUE_SITES, methods=["GET"])
+@cross_origin(expose_headers=["Content-Type", "Authorization"])
+@utils.endpoint_exception_handling(server.app)
+def get_all_unique_sites():
+    """
+    Gets all the unique sites from every run on dropbox
+    """
+    server.app.logger.info(f"Received request at {const.GET_UNIQUE_SITES}")
+    unique_sites = db.get_all_unique_sites()
+    return flask.jsonify(unique_sites)

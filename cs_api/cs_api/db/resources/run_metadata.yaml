@@ -1,10 +1,3 @@
-v19p5:
-  type: Cybershake
-  grid: 400m
-  region: Whole Country
-  tectonic_types:
-  - Shallow Crustal
-  - Volcanic
 v20p4:
   type: Cybershake
   grid: 400m
@@ -45,18 +38,6 @@ v21p6:
   tectonic_types:
   - Shallow Crustal
   - Volcanic
-v22p11:
-  grid: 100m
-  region: Wellington
-  type: Cybershake
-  tectonic_types:
-  - Shallow Crustal
-v22p12:
-  grid: 100m
-  region: Wellington
-  type: Cybershake
-  tectonic_types:
-  - Shallow Crustal
 v22p2:
   grid: 100m
   region: Partial South Island
@@ -66,6 +47,18 @@ v22p2:
 v22p4:
   grid: 100m
   region: Partial South Island
+  type: Cybershake
+  tectonic_types:
+  - Shallow Crustal
+v22p11:
+  grid: 100m
+  region: Wellington
+  type: Cybershake
+  tectonic_types:
+  - Shallow Crustal
+v22p12:
+  grid: 100m
+  region: Wellington
   type: Cybershake
   tectonic_types:
   - Shallow Crustal

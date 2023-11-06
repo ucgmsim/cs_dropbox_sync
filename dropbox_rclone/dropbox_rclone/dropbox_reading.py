@@ -110,7 +110,9 @@ def get_dropbox_api_object():
     secret = os.environ["DROPBOX_SECRET"]
     refresh_token = os.environ["DROPBOX_REFRESH_TOKEN"]
 
-    dbx = dropbox.Dropbox(app_key=key, app_secret=secret, oauth2_refresh_token=refresh_token)
+    dbx = dropbox.Dropbox(
+        app_key=key, app_secret=secret, oauth2_refresh_token=refresh_token
+    )
     return dbx
 
 

@@ -28,7 +28,7 @@ def get_grid_spacing():
     return flask.jsonify(db.get_grid_spacings())
 
 
-@server.app.route(const.GET_RUN_TYPES , methods=["GET"])
+@server.app.route(const.GET_RUN_TYPES, methods=["GET"])
 @cross_origin(expose_headers=["Content-Type", "Authorization"])
 @utils.endpoint_exception_handling(server.app)
 def get_run_types():

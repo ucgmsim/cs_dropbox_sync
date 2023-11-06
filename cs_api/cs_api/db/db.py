@@ -34,12 +34,7 @@ def get_run_types():
     Get the run types aviailable from the database
     :return: list of different run types e.g. (Historical, Cybershake)
     """
-    return sorted(
-        [
-            run_type.type
-            for run_type in RunType.query.all()
-        ]
-    )
+    return sorted([run_type.type for run_type in RunType.query.all()])
 
 
 def get_available_run_names():
@@ -76,6 +71,7 @@ def get_all_unique_sites():
     sites = Site.query.all()
     unique_sites = {site.site_name for site in sites}
     return sorted(list(unique_sites))
+
 
 def add_run(run: Run):
     """

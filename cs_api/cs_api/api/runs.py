@@ -29,9 +29,7 @@ def get_full_run_info():
             [tect_type.tect_type for tect_type in run.tect_types]
         )
         run_info[run_name]["card_info"]["grid_spacing"] = run.grid_spacing.grid_spacing
-        run_info[run_name]["card_info"][
-            "run_type"
-        ] = run.type.type
+        run_info[run_name]["card_info"]["run_type"] = run.type.type
         run_info[run_name]["card_info"]["n_faults"] = len(run.faults)
 
         # Add data types available such as BB, IM, Source

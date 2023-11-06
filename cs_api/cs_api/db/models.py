@@ -184,7 +184,16 @@ class Site(db.Model):
     run_id = db.Column(db.Integer, db.ForeignKey("runs.id"))
     run = db.relationship("Run")
 
-    def __init__(self, site_name: str, lat: float, lon: float, vs30: float, z1p0: float, z2p5: float, run: Run):
+    def __init__(
+        self,
+        site_name: str,
+        lat: float,
+        lon: float,
+        vs30: float,
+        z1p0: float,
+        z2p5: float,
+        run: Run,
+    ):
         """
         Create a site object from a site name
         from extracting the data from dropbox

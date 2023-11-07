@@ -156,6 +156,7 @@ if __name__ == "__main__":
     print(download_root)
     tarfiles = list(download_root.glob("*/*.tar"))  # there may be old tar files
     tarfiles = sorted(tarfiles)
+    failed_tar_count = 0
     print(tarfiles)
     for t in tarfiles:
         if t.name in log_ok_list:  # skip if old ones
@@ -166,7 +167,6 @@ if __name__ == "__main__":
             continue
 
         print(f"### Extracting {t}")
-        tar = tarfile.open(t, "r")
         fault_dir = t.parent
         chunks = t.name.split(".tar")[0].split("_")
         if len(chunks) == 2:  # single tar file
@@ -186,15 +186,54 @@ if __name__ == "__main__":
         untar_dir = fault_dir / data_type
         untar_dir.mkdir(exist_ok=True, parents=True)
         try:
-            tar.extractall(path=untar_dir)
-        except EOFError:
-            print(f"### CRITICAL {t} is broken")
+            # Extract the tar file
+            p = subprocess.Popen(
+                f"tar -xf {t} -C {untar_dir}",
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            p.wait()
+
+            # Check to ensure the tar extracted files are the same as whats in the tar
+            p = subprocess.Popen(
+                f"tar --compare --file={t} {untar_dir}",
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            (
+                err,
+                _,
+            ) = p.communicate()  # this command sends the error message to stdout.
+            err = err.decode("utf-8")
+
+            # Check there was no errors in the tar compare
+            if len(err) > 0:
+                print(f"### !!! {t} is broken")
+                failed_tar_count += 1
+                with open(tar_error_log, "a") as f:
+                    f.write(f"{t.name}\n")
+                continue
+            else:
+                print(f"### {t} is good")
+                with open(tar_ok_log, "a") as f:
+                    f.write(f"{t.name}\n")
+
+        except Exception as e:
+            print(f"### !!! {t} is broken")
+            failed_tar_count += 1
             with open(tar_error_log, "a") as f:
                 f.write(f"{t.name}\n")
             continue
-        else:  # all good
-            with open(tar_ok_log, "a") as f:
-                f.write(f"{t.name}\n")
+
         if cleanup:
             print(f" ### Deleting {t}")
             os.remove(t)
+
+    if failed_tar_count > 0:
+        print(
+            f"### !!! {failed_tar_count} tar files are broken, read {tar_error_log} for details"
+        )
+    else:
+        print(f"### All tar files are good")

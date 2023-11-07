@@ -69,15 +69,13 @@ def load_args():
     return args
 
 
-if __name__ == "__main__":
-    args = load_args()
+def download(dropbox_cs_ver: str, data_types: list, download_root: Path, cleanup: bool = False, ok_download: bool = True, inc_fault: list = None, exc_fault: list = None, force_untar: bool = False):
+    print(data_types)
 
-    dropbox_cs_ver = args.dropbox_cs_ver
-    data_types = args.data_types
-    download_root = args.download_dir.resolve()
-    cleanup = args.cleanup
-
-    print(args.data_types)
+    if inc_fault is None:
+        inc_fault = []
+    if exc_fault is None:
+        exc_fault = []
 
     dropbox_path = f"dropbox:Cybershake/{dropbox_cs_ver}"
 
@@ -98,8 +96,8 @@ if __name__ == "__main__":
         x for x in fault_names if not x.startswith("_")
     ]  # skip if the folder name starts with _
 
-    if len(args.inc_fault) == 0:
-        args.inc_fault = fault_names
+    if len(inc_fault) == 0:
+        inc_fault = fault_names
 
     download_root.mkdir(exist_ok=True, parents=True)
     assert os.access(download_root, os.X_OK | os.W_OK)
@@ -107,7 +105,7 @@ if __name__ == "__main__":
     tar_error_log = download_root / TAR_ERROR_LOG
     tar_ok_log = download_root / TAR_OK_LOG
 
-    if args.force_untar:  # enforce untar from scratch
+    if force_untar:  # enforce untar from scratch
         tar_ok_log.unlink(missing_ok=True)  # delete the ok log
         tar_error_log.unlink(missing_ok=True)  # delete the error log
 
@@ -125,9 +123,9 @@ if __name__ == "__main__":
         log_error_list = [x for x in log_error_list if len(x) > 0]
 
     # final list of faults to download.
-    faults_to_include = list(set(args.inc_fault) - set(args.exc_fault))
+    faults_to_include = list(set(inc_fault) - set(exc_fault))
 
-    if args.ok_download:
+    if ok_download:
         include_txt = ""
         for (
             fault_name
@@ -179,7 +177,7 @@ if __name__ == "__main__":
         if data_type not in data_types:
             continue
 
-        if fault_name in args.exc_fault:
+        if fault_name in exc_fault:
             print(f"### !!! Skip {fault_name} as specified")
             continue
 
@@ -237,3 +235,23 @@ if __name__ == "__main__":
         )
     else:
         print(f"### All tar files are good")
+
+
+if __name__ == "__main__":
+    args = load_args()
+
+    dropbox_cs_ver = args.dropbox_cs_ver
+    data_types = args.data_types
+    download_root = args.download_dir.resolve()
+    cleanup = args.cleanup
+
+    download(
+        dropbox_cs_ver,
+        data_types,
+        download_root,
+        cleanup=cleanup,
+        ok_download=args.ok_download,
+        inc_fault=args.inc_fault,
+        exc_fault=args.exc_fault,
+        force_untar=args.force_untar,
+    )

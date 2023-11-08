@@ -69,7 +69,39 @@ def load_args():
     return args
 
 
-def download(dropbox_cs_ver: str, data_types: list, download_root: Path, cleanup: bool = False, ok_download: bool = True, inc_fault: list = None, exc_fault: list = None, force_untar: bool = False):
+def download(
+    dropbox_cs_ver: str,
+    data_types: list,
+    download_root: Path,
+    cleanup: bool = False,
+    ok_download: bool = True,
+    inc_fault: list = None,
+    exc_fault: list = None,
+    force_untar: bool = False,
+):
+    """
+    Download the data from dropbox
+    Can also manage the untar of the data
+
+    Parameters
+    ----------
+    dropbox_cs_ver: str
+        The CS version stored in dropbox e.g. v22p12
+    data_types: list
+        The data types to download. Can be BB, IM, Source
+    download_root: Path
+        The path to download the data to
+    cleanup: bool
+        If True, delete the tar files after extraction
+    ok_download: bool
+        If True, download the data from dropbox
+    inc_fault: list
+        List of faults to include. All if unspecified
+    exc_fault: list
+        List of faults to exclude. None if unspecified
+    force_untar: bool
+        If True, force the untar from scratch
+    """
     print(data_types)
 
     if inc_fault is None:

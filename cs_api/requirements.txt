@@ -3,5 +3,3 @@ flask
 flask_cors
 uwsgi
 schedule
-flask_sqlalchemy
-SQLAlchemy

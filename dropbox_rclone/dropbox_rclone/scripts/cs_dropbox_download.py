@@ -69,15 +69,45 @@ def load_args():
     return args
 
 
-if __name__ == "__main__":
-    args = load_args()
+def download(
+    dropbox_cs_ver: str,
+    data_types: list,
+    download_root: Path,
+    cleanup: bool = False,
+    ok_download: bool = True,
+    inc_fault: list = None,
+    exc_fault: list = None,
+    force_untar: bool = False,
+):
+    """
+    Download the data from dropbox
+    Can also manage the untar of the data
 
-    dropbox_cs_ver = args.dropbox_cs_ver
-    data_types = args.data_types
-    download_root = args.download_dir.resolve()
-    cleanup = args.cleanup
+    Parameters
+    ----------
+    dropbox_cs_ver: str
+        The CS version stored in dropbox e.g. v22p12
+    data_types: list
+        The data types to download. Can be BB, IM, Source
+    download_root: Path
+        The path to download the data to
+    cleanup: bool
+        If True, delete the tar files after extraction
+    ok_download: bool
+        If True, download the data from dropbox
+    inc_fault: list
+        List of faults to include. All if unspecified
+    exc_fault: list
+        List of faults to exclude. None if unspecified
+    force_untar: bool
+        If True, force the untar from scratch
+    """
+    print(data_types)
 
-    print(args.data_types)
+    if inc_fault is None:
+        inc_fault = []
+    if exc_fault is None:
+        exc_fault = []
 
     dropbox_path = f"dropbox:Cybershake/{dropbox_cs_ver}"
 
@@ -98,8 +128,8 @@ if __name__ == "__main__":
         x for x in fault_names if not x.startswith("_")
     ]  # skip if the folder name starts with _
 
-    if len(args.inc_fault) == 0:
-        args.inc_fault = fault_names
+    if len(inc_fault) == 0:
+        inc_fault = fault_names
 
     download_root.mkdir(exist_ok=True, parents=True)
     assert os.access(download_root, os.X_OK | os.W_OK)
@@ -107,7 +137,7 @@ if __name__ == "__main__":
     tar_error_log = download_root / TAR_ERROR_LOG
     tar_ok_log = download_root / TAR_OK_LOG
 
-    if args.force_untar:  # enforce untar from scratch
+    if force_untar:  # enforce untar from scratch
         tar_ok_log.unlink(missing_ok=True)  # delete the ok log
         tar_error_log.unlink(missing_ok=True)  # delete the error log
 
@@ -125,9 +155,9 @@ if __name__ == "__main__":
         log_error_list = [x for x in log_error_list if len(x) > 0]
 
     # final list of faults to download.
-    faults_to_include = list(set(args.inc_fault) - set(args.exc_fault))
+    faults_to_include = list(set(inc_fault) - set(exc_fault))
 
-    if args.ok_download:
+    if ok_download:
         include_txt = ""
         for (
             fault_name
@@ -156,6 +186,7 @@ if __name__ == "__main__":
     print(download_root)
     tarfiles = list(download_root.glob("*/*.tar"))  # there may be old tar files
     tarfiles = sorted(tarfiles)
+    failed_tar_count = 0
     print(tarfiles)
     for t in tarfiles:
         if t.name in log_ok_list:  # skip if old ones
@@ -166,7 +197,6 @@ if __name__ == "__main__":
             continue
 
         print(f"### Extracting {t}")
-        tar = tarfile.open(t, "r")
         fault_dir = t.parent
         chunks = t.name.split(".tar")[0].split("_")
         if len(chunks) == 2:  # single tar file
@@ -179,22 +209,81 @@ if __name__ == "__main__":
         if data_type not in data_types:
             continue
 
-        if fault_name in args.exc_fault:
+        if fault_name in exc_fault:
             print(f"### !!! Skip {fault_name} as specified")
             continue
 
         untar_dir = fault_dir / data_type
         untar_dir.mkdir(exist_ok=True, parents=True)
         try:
-            tar.extractall(path=untar_dir)
-        except EOFError:
-            print(f"### CRITICAL {t} is broken")
+            # Extract the tar file
+            p = subprocess.Popen(
+                f"tar -xf {t} -C {untar_dir}",
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            p.wait()
+
+            # Check to ensure the tar extracted files are the same as whats in the tar
+            p = subprocess.Popen(
+                f"tar --compare --file={t} {untar_dir}",
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            (
+                err,
+                _,
+            ) = p.communicate()  # this command sends the error message to stdout.
+            err = err.decode("utf-8")
+
+            # Check there was no errors in the tar compare
+            if len(err) > 0:
+                print(f"### !!! {t} is broken")
+                failed_tar_count += 1
+                with open(tar_error_log, "a") as f:
+                    f.write(f"{t.name}\n")
+                continue
+            else:
+                print(f"### {t} is good")
+                with open(tar_ok_log, "a") as f:
+                    f.write(f"{t.name}\n")
+
+        except Exception as e:
+            print(f"### !!! {t} is broken")
+            failed_tar_count += 1
             with open(tar_error_log, "a") as f:
                 f.write(f"{t.name}\n")
             continue
-        else:  # all good
-            with open(tar_ok_log, "a") as f:
-                f.write(f"{t.name}\n")
+
         if cleanup:
             print(f" ### Deleting {t}")
             os.remove(t)
+
+    if failed_tar_count > 0:
+        print(
+            f"### !!! {failed_tar_count} tar files are broken, read {tar_error_log} for details"
+        )
+    else:
+        print(f"### All tar files are good")
+
+
+if __name__ == "__main__":
+    args = load_args()
+
+    dropbox_cs_ver = args.dropbox_cs_ver
+    data_types = args.data_types
+    download_root = args.download_dir.resolve()
+    cleanup = args.cleanup
+
+    download(
+        dropbox_cs_ver,
+        data_types,
+        download_root,
+        cleanup=cleanup,
+        ok_download=args.ok_download,
+        inc_fault=args.inc_fault,
+        exc_fault=args.exc_fault,
+        force_untar=args.force_untar,
+    )

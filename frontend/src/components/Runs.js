@@ -1,7 +1,6 @@
-import React, { useEffect, useState, memo } from "react";
+import React, {useEffect, useState, memo } from "react";
 import { Card, Placeholder } from "react-bootstrap";
 
-import * as CONSTANTS from "Constants";
 import { RunCard } from "components";
 
 import "assets/Runs.css";
@@ -18,12 +17,18 @@ const Runs = ({ viewRuns, runData, setRun }) => {
       <Placeholder xs={4} size={"sm"} bg="secondary" />
       <Placeholder xs={8} size={"sm"} bg="secondary" />{" "}
       <Placeholder xs={3} size={"sm"} bg="secondary" />
-      <Placeholder xs={7} size={"sm"} bg="secondary" />{" "}
-      <Placeholder xs={4} size={"sm"} bg="secondary" />
     </Placeholder>
   );
 
-  if (viewRuns.length > 0) {
+  const [selectedRun, setSelectedRun] = useState([]);
+
+  const handleClick = (runName) => {
+    // Sets the select run in the Form component
+    setRun([runName]);
+    setSelectedRun(runName);
+  }
+
+  if (Object.keys(runData).length > 0) {
     return (
       <div className="sub-section run-card-holder">
         {viewRuns.map(function (run, i) {
@@ -31,9 +36,9 @@ const Runs = ({ viewRuns, runData, setRun }) => {
             <RunCard
               key={i}
               runData={runData[run.value]}
-              setRun={setRun}
+              setRun={handleClick}
               runName={run.value}
-              loadingPlaceholder={loadingPlaceholder}
+              active={selectedRun[0] === run.value}
             />
           );
         })}
@@ -48,6 +53,9 @@ const Runs = ({ viewRuns, runData, setRun }) => {
             <Card className="run-card" key={i}>
               <Card.Body className="run-card-body">
                 <Card.Title className="run-card-title">
+                  <Placeholder as={Card.Title} animation="glow" xs={12}>
+                    <Placeholder xs={12} size={"lg"} bg="secondary" />{" "}
+                  </Placeholder>
                   <Placeholder as={Card.Title} animation="glow" xs={12}>
                     <Placeholder xs={12} size={"lg"} bg="secondary" />{" "}
                   </Placeholder>

@@ -1,14 +1,11 @@
-import React, { useEffect, useState, memo } from "react";
-import Select from "react-select";
-
-import * as CONSTANTS from "Constants";
+import React, {memo} from "react";
 
 import "assets/Form.css";
 
 const Map = () => {
 
   return (
-    <div className="border section">
+    <div className="border section map-section">
       Map
     </div>
   );

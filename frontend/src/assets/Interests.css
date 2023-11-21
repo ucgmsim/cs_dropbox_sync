@@ -1,0 +1,28 @@
+.site-source-select-box {
+    width: 20vw;
+    margin: 1rem;
+}
+
+.sub-section-interests {
+    margin-top: 5vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.bottom-buttons {
+    position: fixed;
+    bottom: 5vh;
+    margin-top: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.find-dataset-button {
+    margin-top: 1.5rem;
+}

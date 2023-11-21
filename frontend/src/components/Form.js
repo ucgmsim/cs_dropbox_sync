@@ -1,23 +1,30 @@
-import React, { useEffect, useState, memo, useRef } from "react";
+import React, {useEffect, useState, memo} from "react";
 import Select from "react-select";
 
-import { Runs, InstallCard } from "components";
+import {Runs} from "components";
 import * as CONSTANTS from "Constants";
+import Alert from '@mui/material/Alert';
 
 import "assets/Form.css";
-import { Button } from "react-bootstrap";
+import "assets/Popup.css";
+import {Button} from "react-bootstrap";
+import {APIQueryBuilder} from "./Utils";
 
-const Form = () => {
+const Form = ({interests, setDataset, goBack}) => {
   // Filters
   const [availableGridSpacings, setAvailableGridSpacings] = useState([]);
   const [selectedGridSpacings, setSelectedGridSpacings] = useState([]);
-  const [availableScientificVersions, setAvailableScientificVersions] =
-    useState([]);
-  const [selectedScientificVersions, setSelectedScientificVersions] = useState(
-    []
-  );
+  const [availableRunTypes, setAvailableRunTypes] = useState([]);
+  const [selectedRunTypes, setSelectedRunType] = useState([]);
   const [availableTectonicTypes, setAvailableTectonicTypes] = useState([]);
   const [selectedTectonicTypes, setSelectedTectonicTypes] = useState([]);
+  const [siteOrSourceText, setSiteOrSourceText] = useState("");
+
+  // Filter Runs
+  const [interestRuns, setInterestRuns] = useState(null);
+  const [GridSpacingRuns, setGridSpacingRuns] = useState(null);
+  const [RunTypeRuns, setRunTypeRuns] = useState(null);
+  const [TectonicTypeRuns, setTectonicTypeRuns] = useState(null);
 
   // Runs
   const [availableRuns, setAvailableRuns] = useState([]);
@@ -26,16 +33,6 @@ const Form = () => {
   const [runData, setRunData] = useState([]);
   const [runDataLookup, setRunDataLookup] = useState({});
   const [selectedRunData, setSelectedRunData] = useState([]);
-
-  // Download Section
-  const [downloadAvailable, setDownloadAvailable] = useState(false);
-  const [availableDataTypes, setAvailableDataTypes] = useState([]);
-  const [selectedDataTypes, setSelectedDataTypes] = useState([]);
-  const [availableFaults, setAvailableFaults] = useState([]);
-  const [selectedFaults, setSelectedFaults] = useState([]);
-  const [downloadLinks, setDownloadLinks] = useState([]);
-  const [selectedTotalSize, setSelectedTotalSize] = useState(0);
-  const textAreaRef = useRef(null);
 
   // Get Grid Spacing filter on page load
   useEffect(() => {
@@ -47,29 +44,29 @@ const Form = () => {
         // Set Available Grid Spacing Select Dropdown
         let tempOptionArray = [];
         for (const value of Object.values(responseData)) {
-          tempOptionArray.push({ value: value, label: value });
+          tempOptionArray.push({value: value, label: value});
         }
         setAvailableGridSpacings(tempOptionArray);
       });
     }
   }, [availableGridSpacings]);
 
-  // Get Scientific Version filter on page load
+  // Get Run Type filter on page load
   useEffect(() => {
-    if (availableScientificVersions.length === 0) {
-      fetch(CONSTANTS.CS_API_URL + CONSTANTS.GET_SCIENTIFIC_VERSION_ENDPOINT, {
+    if (availableRunTypes.length === 0) {
+      fetch(CONSTANTS.CS_API_URL + CONSTANTS.GET_RUN_TYPES_ENDPOINT, {
         method: "GET",
       }).then(async (response) => {
         const responseData = await response.json();
-        // Set Available Scientific Version Select Dropdown
+        // Set Available Run Types for the Select Dropdown
         let tempOptionArray = [];
         for (const value of Object.values(responseData)) {
-          tempOptionArray.push({ value: value, label: value });
+          tempOptionArray.push({value: value, label: value});
         }
-        setAvailableScientificVersions(tempOptionArray);
+        setAvailableRunTypes(tempOptionArray);
       });
     }
-  }, [availableScientificVersions]);
+  }, [availableRunTypes]);
 
   // Get Tectonic Types filter on page load
   useEffect(() => {
@@ -81,29 +78,106 @@ const Form = () => {
         // Set Available Tectonic Types Select Dropdown
         let tempOptionArray = [];
         for (const value of Object.values(responseData)) {
-          tempOptionArray.push({ value: value, label: value });
+          tempOptionArray.push({value: value, label: value});
         }
         setAvailableTectonicTypes(tempOptionArray);
       });
     }
   }, [availableTectonicTypes]);
 
+  // Function to apply every filter to the available runs to set the shown runs
+  useEffect(() => {
+    // Add every set together, if null ignore
+    let tempShownRuns = availableRuns;
+    if (interestRuns !== null) {
+      tempShownRuns = interestRuns.filter(interestRun =>
+        tempShownRuns.some(tempShownRun => interestRun.value === tempShownRun.value)
+      );
+    }
+    if (GridSpacingRuns !== null) {
+      tempShownRuns = GridSpacingRuns.filter(gridSpacingRun =>
+        tempShownRuns.some(tempShownRun => gridSpacingRun.value === tempShownRun.value)
+      );
+    }
+    if (RunTypeRuns !== null) {
+      tempShownRuns = RunTypeRuns.filter(runTypeRun =>
+        tempShownRuns.some(tempShownRun => runTypeRun.value === tempShownRun.value)
+      );
+    }
+    if (TectonicTypeRuns !== null) {
+      tempShownRuns = TectonicTypeRuns.filter(tectonicTypeRun =>
+        tempShownRuns.some(tempShownRun => tectonicTypeRun.value === tempShownRun.value)
+      );
+    }
+    setShownRuns(tempShownRuns);
+  }, [availableRuns, interestRuns, GridSpacingRuns, RunTypeRuns, TectonicTypeRuns]);
+
+  // Set GridSpacingRuns when the Grid Spacing filter is changed
+  useEffect(() => {
+    if (selectedGridSpacings.length > 0) {
+      let tempRunDataLookup = runDataLookup;
+      const gridSpacings = selectedGridSpacings.map((spacing) => spacing.value);
+      const tempShownRuns = Object.keys(tempRunDataLookup).reduce((acc, run_name) => {
+        if (gridSpacings.includes(tempRunDataLookup[run_name]["card_info"]["grid_spacing"])) {
+          acc.push({
+            key: run_name,
+            value: run_name,
+          });
+        }
+        return acc;
+      }, []);
+      setGridSpacingRuns(tempShownRuns);
+    } else {
+      setGridSpacingRuns(null);
+    }
+  }, [runDataLookup, selectedGridSpacings]);
+
+  // Set RunTypeRuns when the Run Type filter is changed
+  useEffect(() => {
+    if (selectedRunTypes.length > 0) {
+      let tempRunDataLookup = runDataLookup;
+      const runTypes = selectedRunTypes.map((runType) => runType.value);
+      const tempShownRuns = Object.keys(tempRunDataLookup).reduce((acc, run_name) => {
+        if (runTypes.includes(tempRunDataLookup[run_name]["card_info"]["run_type"])) {
+          acc.push({
+            key: run_name,
+            value: run_name,
+          });
+        }
+        return acc;
+      }, []);
+      setRunTypeRuns(tempShownRuns);
+    } else {
+      setRunTypeRuns(null);
+    }
+  }, [runDataLookup, selectedRunTypes]);
+
+  // Set TectonicTypeRuns when the Tectonic Type filter is changed
+  useEffect(() => {
+    if (selectedTectonicTypes.length > 0) {
+      let tempRunDataLookup = runDataLookup;
+      const tectonicTypes = selectedTectonicTypes.map((tectonicType) => tectonicType.value);
+      const tempShownRuns = Object.keys(tempRunDataLookup).reduce((acc, run_name) => {
+        // Loop over each tectonic type in the run
+        for (const tectonicType of tempRunDataLookup[run_name]["card_info"]["tectonic_types"]) {
+          if (tectonicTypes.includes(tectonicType)) {
+            acc.push({
+              key: run_name,
+              value: run_name,
+            });
+            break;
+          }
+        }
+        return acc;
+      }, []);
+      setTectonicTypeRuns(tempShownRuns);
+    } else {
+      setTectonicTypeRuns(null);
+    }
+  }, [runDataLookup, selectedTectonicTypes]);
+
   // Get Available Runs on page load
   useEffect(() => {
-    if (availableRuns.length === 0) {
-      fetch(CONSTANTS.CS_API_URL + CONSTANTS.GET_AVAILABLE_RUNS_ENDPOINT, {
-        method: "GET",
-      }).then(async (response) => {
-        const responseData = await response.json();
-        // Set Available Runs Array
-        let tempOptionArray = [];
-        for (const value of Object.values(responseData)) {
-          tempOptionArray.push({ value: value, label: value });
-        }
-        setAvailableRuns(tempOptionArray);
-        setShownRuns(tempOptionArray);
-      });
-    }
     if (Object.keys(runData).length === 0) {
       // Get the run data for all the runs
       fetch(CONSTANTS.CS_API_URL + CONSTANTS.GET_RUNS_INFO_ENDPOINT, {
@@ -111,22 +185,69 @@ const Form = () => {
       }).then(async (response) => {
         const responseData = await response.json();
         setRunData(responseData);
+        const runDataLookupTemp = responseData.reduce((lookup, run) => {
+          lookup[Object.keys(run)[0]] = Object.values(run)[0];
+          return lookup;
+        }, {});
+        setRunDataLookup(runDataLookupTemp);
+        // Set Available Runs Array
+        let tempOptionArray = [];
+        for (const run_dict of Object.values(responseData)) {
+          const value = Object.keys(run_dict)[0];
+          tempOptionArray.push({value: value, label: value});
+        }
+        setAvailableRuns(tempOptionArray);
       });
     }
-  }, [availableRuns]);
-
-  // Update when the runData changes
-  useEffect(() => {
-    // Only update if the runData length has changed
-    if (runData.length !== Object.keys(runDataLookup).length) {
-      // Convert the runData array into a lookup table
-      const runDataLookupTemp = runData.reduce((lookup, run) => {
-        lookup[Object.keys(run)[0]] = Object.values(run)[0];
-        return lookup;
-      }, {});
-      setRunDataLookup(runDataLookupTemp);
-    }
   }, [runData]);
+
+  // Set the Interests text based on the interests selected
+  useEffect(() => {
+    // Find if the interests are Sites or sources
+    let tmpSiteOrSourceText = "";
+    let filterBy = "";
+    let filteredList = [];
+    if (interests[0]["sites"].length > 0) {
+      tmpSiteOrSourceText = "Filtered by Sites of Interest (";
+      for (const site of interests[0]["sites"]) {
+        tmpSiteOrSourceText += site["value"] + ", ";
+        filteredList.push(site["value"]);
+      }
+      tmpSiteOrSourceText += ")";
+      filterBy = "sites";
+    } else if (interests[1]["sources"].length > 0) {
+      tmpSiteOrSourceText = "Filtered by Sources of Interest (";
+      for (const source of interests[1]["sources"]) {
+        tmpSiteOrSourceText += source["value"] + ", ";
+        filteredList.push(source["value"]);
+      }
+      tmpSiteOrSourceText += ")";
+      filterBy = "sources";
+    } else {
+      // There is no Interests
+      tmpSiteOrSourceText = null;
+    }
+    setSiteOrSourceText(tmpSiteOrSourceText);
+    if (tmpSiteOrSourceText !== null) {
+      let queryString = APIQueryBuilder({
+        filter_by: filterBy,
+        filter_list: filteredList,
+      });
+
+      // Send a request to the API to get the runs that match the interests
+      fetch(CONSTANTS.CS_API_URL + CONSTANTS.GET_RUNS_FROM_INTERESTS_ENDPOINT + queryString, {
+        method: "GET",
+      }).then(async (response) => {
+        const responseData = await response.json();
+        // Set Shown Runs Array
+        let tempOptionArray = [];
+        for (const value of Object.values(responseData)) {
+          tempOptionArray.push({value: value, label: value});
+        }
+        setInterestRuns(tempOptionArray);
+      });
+    }
+  }, [interests]);
 
   // Change the download options when a run is selected
   useEffect(() => {
@@ -134,114 +255,40 @@ const Form = () => {
       if (Object.keys(runDataLookup).length > 0) {
         // Set the selected run data
         setSelectedRunData(runDataLookup[selectedRun[0]]);
-
-        // Set Available Data Types Select Dropdown
-        let tempOptionArray = [];
-        for (const value of Object.values(
-          runDataLookup[selectedRun[0]]["data_types"]
-        )) {
-          tempOptionArray.push({ value: value, label: value });
-        }
-        setAvailableDataTypes(tempOptionArray);
-        // Set Available Faults Array
-        tempOptionArray = [];
-        for (const key of Object.keys(
-          runDataLookup[selectedRun[0]]["faults"]
-        )) {
-          tempOptionArray.push({ value: key, label: key });
-        }
-        setAvailableFaults(tempOptionArray);
-      } else {
-        setAvailableDataTypes([]);
-        setAvailableFaults([]);
       }
     }
-  }, [selectedRun]);
+  }, [runDataLookup, selectedRun]);
 
-  // Updates changes to file size shown when data types and faults change
-  useEffect(() => {
-    if (selectedDataTypes.length > 0 && selectedFaults.length > 0) {
-      let files = getSelectedFiles();
-      let totalBytes = 0;
-      for (const file of files) {
-        totalBytes += file["file_size"];
-      }
-      setSelectedTotalSize(totalBytes);
-      setDownloadAvailable(true);
-    } else {
-      setDownloadAvailable(false);
-    }
-  }, [selectedDataTypes, selectedFaults]);
-
-  const onSelectGridSpacing = (e) => {
-    setSelectedGridSpacings(e);
-  };
-
-  const onSelectScientificVersion = (e) => {
-    setSelectedScientificVersions(e);
-  };
-
-  const onSelectTectonicType = (e) => {
-    setSelectedTectonicTypes(e);
-  };
-
-  const getSelectedFiles = () => {
-    // Gets the files that are selected based on the selected preferences
-    // Get the strings of the selected data types
-    const selectedDataTypeStrings = selectedDataTypes.map((item) => item.value);
-
-    let files = [];
-    // Loop over the selected Faults
-    for (const fault of selectedFaults) {
-      // Find the fault info in the selected run data
-      const faultInfo = selectedRunData["faults"][fault.value];
-      // Loop over each file in the faultInfo and check if it matches the selected data types
-      for (const file of Object.keys(faultInfo)) {
-        if (selectedDataTypeStrings.some((item) => file.includes(item))) {
-          files.push(faultInfo[file]);
-        }
-      }
-    }
-    return files;
-  };
-
-  async function downloadFiles() {
-    // Downloads the files selected
-    let files = getSelectedFiles();
-    const totalFiles = files.length;
-
-    if (totalFiles === 1) {
-      setDownloadLinks([]);
-      const link = document.createElement("a");
-      // Just download the single file by itself
-      link.href = files[0]["download_link"];
-      link.download =
-        selectedRun +
-        "_" +
-        files[0]["download_link"].split("/").pop().split("?").shift();
-      link.click();
-      link.remove();
-    } else {
-      // Multiple files, but BB is one of them, so download them all separately using a download manager
-      setDownloadLinks(files.map((file) => file.download_link));
+  const onSelectRun = (e) => {
+    if (e[0][0].localeCompare(selectedRun[0])) {
+      setSelectedRun(e[0]);
     }
   }
 
-  const formatBytes = (bytes) => {
-    if (bytes === 0) {
-      return "0 B";
-    }
+  const selectDataset = () => {
+    setDataset(selectedRun, selectedRunData);
+  }
 
-    const sizes = ["B", "KB", "MB", "GB", "TB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    const formattedBytes = parseFloat((bytes / Math.pow(1024, i)).toFixed(1));
-
-    return `${formattedBytes} ${sizes[i]}`;
-  };
+  const removeInterestFilter = () => {
+    setInterestRuns(null);
+    setSiteOrSourceText(null);
+  }
 
   return (
     <div className="border section">
       <div className="sub-section">
+        {siteOrSourceText !== null && <Alert
+          severity="info"
+          action={
+            <Button variant="secondary"
+                    size="sm" onClick={removeInterestFilter}>
+              Remove Filter
+            </Button>
+          }
+        >
+          {siteOrSourceText}
+        </Alert>
+        }
         <div className="form-label">Filters</div>
         <div className="row three-column-row">
           <div className="col-4">
@@ -251,17 +298,17 @@ const Form = () => {
               isMulti={true}
               options={availableGridSpacings}
               isDisabled={availableGridSpacings.length === 0}
-              onChange={(e) => onSelectGridSpacing(e)}
+              onChange={(e) => setSelectedGridSpacings(e)}
             ></Select>
           </div>
           <div className="col-4">
             <Select
               className="select-box"
-              placeholder="Scientific Version"
+              placeholder="Run Type"
               isMulti={true}
-              options={availableScientificVersions}
-              isDisabled={availableScientificVersions.length === 0}
-              onChange={(e) => onSelectScientificVersion(e)}
+              options={availableRunTypes}
+              isDisabled={availableRunTypes.length === 0}
+              onChange={(e) => setSelectedRunType(e)}
             ></Select>
           </div>
           <div className="col-4">
@@ -271,7 +318,7 @@ const Form = () => {
               isMulti={true}
               options={availableTectonicTypes}
               isDisabled={availableTectonicTypes.length === 0}
-              onChange={(e) => onSelectTectonicType(e)}
+              onChange={(e) => setSelectedTectonicTypes(e)}
             ></Select>
           </div>
         </div>
@@ -281,56 +328,30 @@ const Form = () => {
           <Runs
             viewRuns={shownRuns}
             runData={runDataLookup}
-            setRun={setSelectedRun}
+            setRun={onSelectRun}
           />
         </div>
-      </div>
-      <div className="sub-section">
-        <div className="form-label">Download Data</div>
-        <div className="row two-column-row center-elm">
-          <div className="col-4">
-            <Select
-              className="select-box"
-              placeholder="Data Types"
-              isMulti={true}
-              options={availableDataTypes}
-              isDisabled={availableDataTypes.length === 0}
-              onChange={(e) => setSelectedDataTypes(e)}
-            ></Select>
-          </div>
-          <div className="col-4">
-            <Select
-              className="select-box"
-              placeholder="Faults"
-              isMulti={true}
-              options={availableFaults}
-              isDisabled={availableFaults.length === 0}
-              onChange={(e) => setSelectedFaults(e)}
-            ></Select>
-          </div>
-        </div>
-        <p>Selected total file size: {formatBytes(selectedTotalSize)}</p>
         <Button
           variant="primary"
           size="lg"
-          disabled={!downloadAvailable}
-          className="download-button"
-          onClick={downloadFiles}
+          disabled={selectedRun.length === 0}
+          className="select-dataset-button"
+          onClick={selectDataset}
         >
-          Download
+          Select Dataset
         </Button>
-        {downloadLinks.length > 0 && (
-          <div>
-            <InstallCard />
-            <textarea
-              ref={textAreaRef}
-              value={downloadLinks.join("\n")}
-              readOnly
-              style={{ position: "absolute", left: "-9999px" }}
-            />
-          </div>
-        )}
       </div>
+      <div className="nav-section">
+        <Button
+          variant="secondary"
+          size="sm"
+          className="back-button"
+          onClick={goBack}
+        >
+          Back
+        </Button>
+      </div>
+
     </div>
   );
 };

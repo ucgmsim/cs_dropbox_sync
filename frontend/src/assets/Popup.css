@@ -1,0 +1,22 @@
+.popup-overlay {
+  position: fixed;
+  top: 4vh;
+  left: 10vw;
+  width: 80%;
+  height: 45vw;
+  background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent black overlay */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.popup-content {
+  background-color: #fff; /* Background color for the content */
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+}
+
+.close-button {
+  margin-top: 10px;
+  cursor: pointer;
+}

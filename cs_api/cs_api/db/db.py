@@ -29,17 +29,12 @@ def get_grid_spacings():
     )
 
 
-def get_scientific_versions():
+def get_run_types():
     """
-    Get the scientific versions from the database
-    :return: list of scientific versions
+    Get the run types aviailable from the database
+    :return: list of different run types e.g. (Historical, Cybershake)
     """
-    return sorted(
-        [
-            scientific_version.scientific_version
-            for scientific_version in ScientificVersion.query.all()
-        ]
-    )
+    return sorted([run_type.type for run_type in RunType.query.all()])
 
 
 def get_available_run_names():
@@ -56,6 +51,26 @@ def get_available_runs():
     :return: list of available run objects
     """
     return Run.query.all()
+
+
+def get_all_unique_faults():
+    """
+    Get all the unique faults from the database
+    :return: list of unique faults
+    """
+    faults = Fault.query.all()
+    unique_faults = {fault.fault_name for fault in faults}
+    return sorted(list(unique_faults))
+
+
+def get_all_unique_sites():
+    """
+    Get all the unique sites from the database
+    :return: list of unique sites
+    """
+    sites = Site.query.all()
+    unique_sites = {site.site_name for site in sites}
+    return sorted(list(unique_sites))
 
 
 def add_run(run: Run):

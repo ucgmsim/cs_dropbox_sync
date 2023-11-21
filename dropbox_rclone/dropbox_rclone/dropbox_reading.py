@@ -106,8 +106,13 @@ def get_dropbox_api_object():
     dropbox.Dropbox
         Dropbox object to use
     """
-    access_token = os.environ["DROPBOX_ACCESS_TOKEN"]
-    dbx = dropbox.Dropbox(access_token)
+    key = os.environ["DROPBOX_KEY"]
+    secret = os.environ["DROPBOX_SECRET"]
+    refresh_token = os.environ["DROPBOX_REFRESH_TOKEN"]
+
+    dbx = dropbox.Dropbox(
+        app_key=key, app_secret=secret, oauth2_refresh_token=refresh_token
+    )
     return dbx
 
 

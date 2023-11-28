@@ -180,5 +180,6 @@ def add_run():
         # Create the run object
         run_obj = Run(run_name=run_name, run_info=run_info, site_df=site_df)
         db.session.add(run_obj)
+        db.session.commit()
 
         return flask.jsonify({"success": "Correct secret key and added run to db"}), 200

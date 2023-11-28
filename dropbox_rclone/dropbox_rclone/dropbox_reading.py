@@ -21,7 +21,7 @@ def find_available_runs():
     return runs
 
 
-def get_run_info(run: str):
+def get_run_info(run: str, dropbox_directory: str = None):
     """
     Gets the run info from the dropbox folder such as the
     Data types available and fault names and their file sizes per data type
@@ -30,13 +30,18 @@ def get_run_info(run: str):
     ----------
     run : str
         Name of the run
+    dropbox_directory : str (optional)
+        Path to the dropbox directory, if None then will use the default
+        Which is the CYBERSHAKE_DIRECTORY in the constants file
 
     Returns
     -------
     dict
         Dictionary of fault names and their files with sizes
     """
-    cmd = f"rclone ls {const.CYBERSHAKE_DIRECTORY}/{run}"
+    if dropbox_directory is None:
+        dropbox_directory = f"{const.CYBERSHAKE_DIRECTORY}/{run}"
+    cmd = f"rclone ls {dropbox_directory}"
     p = subprocess.Popen(
         cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
     )
@@ -116,7 +121,7 @@ def get_dropbox_api_object():
     return dbx
 
 
-def get_full_dropbox_path(run: str, file_name: str):
+def get_full_dropbox_path(run: str, file_name: str, dropbox_directory: str = None):
     """
     Gets the full path to the file on dropbox
 
@@ -126,5 +131,9 @@ def get_full_dropbox_path(run: str, file_name: str):
         Name of the run e.g. v22p12
     file_name : str
         Name of the file e.g. Albury_IM.tar
+    dropbox_directory : str (optional)
+        Path to the dropbox directory, if None then will use the default Cybershake directory
     """
-    return f"/{const.CYBERSHAKE_DIRECTORY.split(':')[-1]}/{run}/{file_name.split('_')[0]}/{file_name}"
+    if dropbox_directory is None:
+        dropbox_directory = const.CYBERSHAKE_DIRECTORY
+    return f"/{dropbox_directory.split(':')[-1]}/{run}/{file_name.split('_')[0]}/{file_name}"

@@ -18,6 +18,13 @@ def load_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("dropbox_cs_ver", type=str, help="CS ver stored in Dropbox")
     parser.add_argument(
+        "--dropbox_directory",
+        type=str,
+        help="Dropbox directory for when not downloading not from the Cybershake directory."
+        "e.g. dropbox:Cybershake/v22p12",
+        default=None,
+    )
+    parser.add_argument(
         "-t",
         "--data_types",
         help="Data types to download. Gets all BB, IM, Source if not specified",
@@ -73,13 +80,17 @@ if __name__ == "__main__":
     args = load_args()
 
     dropbox_cs_ver = args.dropbox_cs_ver
+    dropbox_directory = args.dropbox_directory
     data_types = args.data_types
     download_root = args.download_dir.resolve()
     cleanup = args.cleanup
 
     print(args.data_types)
 
-    dropbox_path = f"dropbox:Cybershake/{dropbox_cs_ver}"
+    if dropbox_directory is None:
+        dropbox_path = f"dropbox:Cybershake/{dropbox_cs_ver}"
+    else:
+        dropbox_path = dropbox_directory
 
     p = subprocess.Popen(
         f"rclone lsd {dropbox_path}",

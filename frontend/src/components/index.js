@@ -5,6 +5,7 @@ import RunCard from "./RunCard";
 import InstallCard from "./InstallCard";
 import Interests from "./Interests";
 import Download from "./Download";
+import AddRun from "./AddRun";
 
 export {
   Form,
@@ -13,5 +14,6 @@ export {
   RunCard,
   InstallCard,
   Interests,
-  Download
+  Download,
+  AddRun
 };

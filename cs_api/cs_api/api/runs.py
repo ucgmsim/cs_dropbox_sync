@@ -1,9 +1,17 @@
+import os
+import subprocess
+from pathlib import Path
+from tempfile import TemporaryDirectory
+
 import flask
+import pandas as pd
 from flask_cors import cross_origin
 
 from cs_api import server, utils
 from cs_api import constants as const
-from cs_api.db import db
+from cs_api.db import db as cs_db
+from cs_api.server import db
+from cs_api.db.models import *
 
 
 @server.app.route(const.GET_RUN_INFO, methods=["GET"])
@@ -16,7 +24,7 @@ def get_full_run_info():
     """
     server.app.logger.info(f"Received request at {const.GET_RUN_INFO}")
     run_infos = []
-    available_runs = db.get_available_runs()
+    available_runs = cs_db.get_available_runs()
     for run in available_runs:
         run_info = dict()
         run_name = run.run_name
@@ -71,7 +79,7 @@ def get_runs_from_interests():
     )
     filter_list = filter_list.split(",")
     filtered_runs = []
-    available_runs = db.get_available_runs()
+    available_runs = cs_db.get_available_runs()
     for run in available_runs:
         if filter_by == "sources":
             for fault in run.faults:
@@ -88,3 +96,89 @@ def get_runs_from_interests():
                 f"filter_by parameter must be either 'sources' or 'sites', not {filter_by}"
             )
     return flask.jsonify(filtered_runs)
+
+
+@server.app.route(const.ADD_RUN, methods=["POST"])
+@cross_origin(expose_headers=["Content-Type", "Authorization"])
+@utils.endpoint_exception_handling(server.app)
+def add_run():
+    """
+    Adds the run to the database
+    """
+    server.app.logger.info(f"Received request at {const.ADD_RUN}")
+    (
+        run_name,
+        dropbox_folder,
+        run_type,
+        region,
+        tectonic_types,
+        grid_spacing,
+        secret_key,
+    ) = utils.get_check_keys(
+        flask.request.args,
+        (
+            "run_name",
+            "dropbox_folder",
+            "run_type",
+            "region",
+            "tectonic_types",
+            "grid_spacing",
+            "secret_key",
+        ),
+    )
+    tectonic_types = tectonic_types.split(",")
+
+    # Check the secret key is correct
+    if secret_key != os.environ["SECRET_KEY"]:
+        return flask.jsonify({"error": "Incorrect secret key"}), 401
+    else:
+        dropbox_directory = f'dropbox:{"/".join(dropbox_folder.split("/")[2:])}'
+
+        # Load the site_df by taking the current files path and navigating to the resouces directory
+        site_df_ffp = Path(__file__).parent.parent / "db" / "resources" / "site_df.csv"
+        site_df = pd.read_csv(site_df_ffp, index_col=0)
+        # Create a new column for the current run and set all to False
+        site_df[run_name] = False
+
+        # Create a temporary directory to get the site information for the run
+        temp_dir = TemporaryDirectory()
+        temp_path = Path(temp_dir.name).resolve()
+
+        cs_dropbox_download_py_ffp = os.environ["CS_DROPBOX_DOWNLOAD_PY_FFP"]
+
+        # Download the IM data
+        p = subprocess.Popen(
+            f"python {cs_dropbox_download_py_ffp} {run_name} --dropbox_directory {dropbox_directory} --download_dir {temp_path} --force_untar --cleanup -t IM",
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        p.wait()
+
+        # For each fault load the 1st realisation and get the list of stations
+        for fault_dir in temp_path.iterdir():
+            if fault_dir.is_dir():
+                # Find the 1st realisation under any folder directory under fault_dir using glob
+                rel_csv_ffp = list(fault_dir.glob("**/*REL01.csv"))[0]
+                rel_csv = pd.read_csv(rel_csv_ffp)
+                # Get the list of stations
+                stations = rel_csv["station"].unique()
+                # Set the stations to True
+                site_df.loc[stations, run_name] = True
+
+        # Clean up the temporary directory
+        temp_dir.cleanup()
+
+        # Create the run info from the given parameters
+        run_info = {
+            "region": region,
+            "grid": grid_spacing,
+            "tectonic_types": tectonic_types,
+            "type": run_type,
+        }
+
+        # Create the run object
+        run_obj = Run(run_name=run_name, run_info=run_info, site_df=site_df)
+        db.session.add(run_obj)
+
+        return flask.jsonify({"success": "Correct secret key and added run to db"}), 200

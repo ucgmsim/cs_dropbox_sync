@@ -10,6 +10,7 @@ GET_UNIQUE_SITES = "/meta/unique_sites"
 # Run endpoints
 GET_RUN_INFO = "/runs/info"
 GET_RUNS_FROM_INTERESTS = "/runs/interests"
+ADD_RUN = "/runs/add"
 
 # Metadata Path
 METADATA_FILE = Path(__file__).parent / "db" / "resources" / "run_metadata.yaml"

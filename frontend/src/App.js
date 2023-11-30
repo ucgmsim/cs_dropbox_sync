@@ -1,6 +1,6 @@
 import React, {useState} from "react";
 
-import {Form, InstallCard, Map, Interests, Download} from "components";
+import {Form, InstallCard, Map, Interests, Download, AddRun} from "components";
 
 import Stepper from '@mui/material/Stepper';
 import Step from '@mui/material/Step';
@@ -8,6 +8,7 @@ import StepButton from '@mui/material/StepButton';
 
 import "assets/App.css";
 import "bootstrap/dist/css/bootstrap.min.css";
+import {Button} from "react-bootstrap";
 
 function App() {
 
@@ -17,6 +18,8 @@ function App() {
   const [selectedRunData, setSelectedRunData] = useState([]);
   const [activeStep, setActiveStep] = React.useState(0);
   const [completed, setCompleted] = React.useState({});
+  const [showAdd, setShowAdd] = useState(false);
+  const [addRunButtonText, setAddRunButtonText] = useState("Add Run");
 
   const steps = ['Interests', 'Select Dataset', 'Download Data'];
 
@@ -53,31 +56,58 @@ function App() {
     setCompleted({0: true, 1: false, 2: false})
   }
 
+  const setShowAddForm = () => {
+    if (showAdd) {
+      setAddRunButtonText("Add Run");
+      setShowAdd(false);
+    } else {
+      setAddRunButtonText("Back");
+      setShowAdd(true);
+    }
+  }
+
   return (
     <div>
-      <div className="title">Simulation Data</div>
       <div className="App d-flex flex-column h-100">
         <div className="row two-column-row">
-          <div className="col-7 h-100">
-            <Stepper className={"stepper"} nonLinear activeStep={activeStep}>
-              {steps.map((label, index) => (
-                <Step key={label} completed={completed[index]}>
-                  <StepButton color="inherit" disabled={true}>
-                    {label}
-                  </StepButton>
-                </Step>
-              ))}
-            </Stepper>
-            {activeStep === 0 && <Interests setInterest={setInterest}/>}
-            {activeStep === 1 && <Form interests={interests} setDataset={setDataset} goBack={goBack}/>}
-            {activeStep === 2 &&
-              <Download openPopup={handleShowDownloadPopup} selectedRunData={selectedRunData} selectedRun={selectedRun}
-                        goBack={goForm}/>}
+          <div className="col-7 left-side-title">
+            <div className="title">Simulation Data</div>
           </div>
-          <div className="col-5 h-100">
-            <Map/>
+          <div className="col-5 right-side-title">
+            <Button
+              variant="secondary"
+              className="add-run-button"
+              onClick={setShowAddForm}
+            >
+              {addRunButtonText}
+            </Button>
           </div>
         </div>
+        {showAdd && <AddRun/>}
+        {!showAdd &&
+          <div className="row two-column-row">
+            <div className="col-7 h-100">
+              <Stepper className={"stepper"} nonLinear activeStep={activeStep}>
+                {steps.map((label, index) => (
+                  <Step key={label} completed={completed[index]}>
+                    <StepButton color="inherit" disabled={true}>
+                      {label}
+                    </StepButton>
+                  </Step>
+                ))}
+              </Stepper>
+              {activeStep === 0 && <Interests setInterest={setInterest}/>}
+              {activeStep === 1 && <Form interests={interests} setDataset={setDataset} goBack={goBack}/>}
+              {activeStep === 2 &&
+                <Download openPopup={handleShowDownloadPopup} selectedRunData={selectedRunData}
+                          selectedRun={selectedRun}
+                          goBack={goForm}/>}
+            </div>
+            <div className="col-5 h-100">
+              <Map/>
+            </div>
+          </div>
+        }
         {showDownloadPopup && <div className="popup-overlay">
           <div className="popup-content">
             <InstallCard onClose={onCloseDownloadPopup}/>

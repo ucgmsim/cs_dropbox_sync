@@ -18,6 +18,13 @@ def load_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("dropbox_cs_ver", type=str, help="CS ver stored in Dropbox")
     parser.add_argument(
+        "--dropbox_directory",
+        type=str,
+        help="Dropbox directory for when not downloading not from the Cybershake directory."
+        "e.g. dropbox:Cybershake/v22p12",
+        default=None,
+    )
+    parser.add_argument(
         "-t",
         "--data_types",
         help="Data types to download. Gets all BB, IM, Source if not specified",
@@ -73,6 +80,7 @@ def download(
     dropbox_cs_ver: str,
     data_types: list,
     download_root: Path,
+    dropbox_directory: str = None,
     cleanup: bool = False,
     ok_download: bool = True,
     inc_fault: list = None,
@@ -91,6 +99,8 @@ def download(
         The data types to download. Can be BB, IM, Source
     download_root: Path
         The path to download the data to
+    dropbox_directory: str
+        The full custom dropbox path directory, default None for Cybershake
     cleanup: bool
         If True, delete the tar files after extraction
     ok_download: bool
@@ -109,7 +119,10 @@ def download(
     if exc_fault is None:
         exc_fault = []
 
-    dropbox_path = f"dropbox:Cybershake/{dropbox_cs_ver}"
+    if dropbox_directory is None:
+        dropbox_path = f"dropbox:Cybershake/{dropbox_cs_ver}"
+    else:
+        dropbox_path = dropbox_directory
 
     p = subprocess.Popen(
         f"rclone lsd {dropbox_path}",
@@ -273,6 +286,7 @@ if __name__ == "__main__":
     args = load_args()
 
     dropbox_cs_ver = args.dropbox_cs_ver
+    dropbox_directory = args.dropbox_directory
     data_types = args.data_types
     download_root = args.download_dir.resolve()
     cleanup = args.cleanup
@@ -281,6 +295,7 @@ if __name__ == "__main__":
         dropbox_cs_ver,
         data_types,
         download_root,
+        dropbox_directory=dropbox_directory,
         cleanup=cleanup,
         ok_download=args.ok_download,
         inc_fault=args.inc_fault,

@@ -1,0 +1,47 @@
+.form-section {
+    width: 40vw;
+    margin-top: 2vh;
+    margin-bottom: 2vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-wrap: wrap;
+    height: 88vh;
+    gap: 1.5rem;
+}
+
+.add-run-section {
+    margin-bottom: 1vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.add-run-select-box {
+    width: 23vw;
+}
+
+.add-run-text-field {
+    width: 23vw;
+}
+
+.add-run-form-label {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.add-run-bottom-buttons {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.add-run-info {
+    width: 23vw;
+}

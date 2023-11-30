@@ -66,9 +66,10 @@ class Run(db.Model):
     def __init__(
         self,
         run_name: str,
-        run_info: str,
+        run_info: dict,
         site_df: pd.DataFrame,
-        dropbox_df: pd.DataFrame,
+        dropbox_df: pd.DataFrame = None,
+        dropbox_directory: str = None,
     ):
         """
         Create a run object from a run name
@@ -81,12 +82,14 @@ class Run(db.Model):
         run_info : dict
             Dictionary of run metadata information
         site_df : pd.DataFrame
-            DataFrame of site information for this specfic run event
+            DataFrame of site information for this specific run event
         dropbox_df : pd.DataFrame
             DataFrame of stored links for downloading to save time on the dropbox API
             Can be None and if not found in the df then it will be extracted from the API
+        dropbox_directory : str (optional)
+            Path to the dropbox directory, if None then will use the default Cybershake directory
         """
-        faults = dropbox_reading.get_run_info(run_name)
+        faults = dropbox_reading.get_run_info(run_name, dropbox_directory)
         dbx = dropbox_reading.get_dropbox_api_object()
         self.run_name = run_name
         self.n_faults = len(faults)
@@ -115,7 +118,7 @@ class Run(db.Model):
                 # If None or not found then get the link from the dropbox API
                 if dropbox_df is None:
                     file_path = dropbox_reading.get_full_dropbox_path(
-                        run_name, file_name.split("/")[1]
+                        run_name, file_name.split("/")[1], dropbox_directory
                     )
                     download_link = dropbox_reading.get_download_link(file_path, dbx)
                 else:
@@ -126,7 +129,7 @@ class Run(db.Model):
                     ]["dropbox_link"]
                     if len(download_links) == 0:
                         file_path = dropbox_reading.get_full_dropbox_path(
-                            run_name, file_name.split("/")[1]
+                            run_name, file_name.split("/")[1], dropbox_directory
                         )
                         download_link = dropbox_reading.get_download_link(
                             file_path, dbx

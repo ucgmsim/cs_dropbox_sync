@@ -16,7 +16,21 @@
     font-size: 2.5rem;
     font-weight: 600;
     margin-bottom: 0.5rem;
-    text-align: center;
+    margin-left: 0.5rem;
+}
+
+.left-side-title {
+    font-size: 2.5rem;
+    font-weight: 600;
+    text-align: left;
+    height: 4rem;
+}
+
+.right-side-title {
+    height: 4rem;
+    display: flex;
+    align-items: center;
+    justify-content: end;
 }
 
 .border {
@@ -41,6 +55,11 @@
 .stepper {
     width: 50%;
     height: 6vh;
+}
+
+.add-run-button {
+    width: 120px;
+    margin-right: 2rem;
 }
 
 @keyframes fade-in-slide {

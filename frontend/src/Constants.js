@@ -13,3 +13,5 @@ export const GET_UNIQUE_SITES_ENDPOINT = "/meta/unique_sites";
 // Run Endpoints
 export const GET_RUNS_INFO_ENDPOINT = "/runs/info";
 export const GET_RUNS_FROM_INTERESTS_ENDPOINT = "/runs/interests";
+
+export const ADD_RUN_ENDPOINT = "/runs/add";

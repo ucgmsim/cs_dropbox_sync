@@ -210,7 +210,6 @@ def download(
             continue
 
         print(f"### Extracting {t}")
-        tar = tarfile.open(t, "r")
         fault_dir = t.parent
         chunks = t.name.split(".tar")[0].split("_")
         if len(chunks) == 2:  # single tar file

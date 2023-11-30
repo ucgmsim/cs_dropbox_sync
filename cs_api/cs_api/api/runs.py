@@ -11,7 +11,8 @@ from cs_api import server, utils
 from cs_api import constants as const
 from cs_api.db import db as cs_db
 from cs_api.server import db
-from cs_api.db.models import *
+from cs_api.db.models import Run
+from dropbox_rclone.dropbox_rclone.scripts.cs_dropbox_download import download
 
 
 @server.app.route(const.GET_RUN_INFO, methods=["GET"])
@@ -144,16 +145,16 @@ def add_run():
         temp_dir = TemporaryDirectory()
         temp_path = Path(temp_dir.name).resolve()
 
-        cs_dropbox_download_py_ffp = os.environ["CS_DROPBOX_DOWNLOAD_PY_FFP"]
-
         # Download the IM data
-        p = subprocess.Popen(
-            f"python {cs_dropbox_download_py_ffp} {run_name} --dropbox_directory {dropbox_directory} --download_dir {temp_path} --force_untar --cleanup -t IM",
-            shell=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+        download(
+            run_name,
+            ["IM"],
+            temp_path,
+            dropbox_directory=dropbox_directory,
+            cleanup=True,
+            ok_download=True,
+            force_untar=True,
         )
-        p.wait()
 
         # For each fault load the 1st realisation and get the list of stations
         for fault_dir in temp_path.iterdir():
@@ -180,6 +181,6 @@ def add_run():
         # Create the run object
         run_obj = Run(run_name=run_name, run_info=run_info, site_df=site_df)
         db.session.add(run_obj)
-        db.session.commit()
+        # db.session.commit()
 
         return flask.jsonify({"success": "Correct secret key and added run to db"}), 200

@@ -5,6 +5,7 @@ import subprocess
 import shutil
 import yaml
 
+from dropbox_rclone import contants as const
 
 FILE_PATTERN_CONF = "sync_patterns.yaml"
 OPTIONAL_PATTERN_MARKER = "$"
@@ -308,7 +309,7 @@ def upload(
     to_upload_dir = to_upload_root / fault_name
     tar_files_to_upload = [tf.name for tf in list(to_upload_dir.glob(tar_file))]
 
-    # rclone copy {src} dropbox:{dest}
+    # rclone copy {src} {dest}
     # 1. {src} is a file, and {dest} is a file, trivial
     # 2. {src} is a file, {dest} is a directory, the file will be placed under {dest}
     # 3. {src} is a directory, {dest} is a directory, all files under {src} will be copied to {dest}. No directory made
@@ -447,7 +448,7 @@ if __name__ == "__main__":
     to_pack_root.mkdir(exist_ok=True)
     to_upload_root.mkdir(exist_ok=True)
 
-    dropbox_path = f"dropbox:Cybershake/{cs_ver}"
+    dropbox_path = f"{const.CYBERSHAKE_DIRECTORY}/{cs_ver}"
 
     with open(files_to_sync, "r") as f:
         files_dict = yaml.safe_load(f)

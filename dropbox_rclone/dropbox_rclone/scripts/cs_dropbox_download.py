@@ -5,8 +5,9 @@ import os
 
 import tarfile
 
+from dropbox_rclone import contants as const
 
-# rclone ls dropbox:Cybershake/v22p12|grep -e "Source\|IM"| sed -E 's/^[[:space:]]+//' |cut -d" " -f2 |xargs -I {} rclone copy dropbox:Cybershake/v22p12/{} . --progress
+# rclone ls dropbox:/Quake\ CoRE/Public/Cybershake/v22p12|grep -e "Source\|IM"| sed -E 's/^[[:space:]]+//' |cut -d" " -f2 |xargs -I {} rclone copy dropbox:/Quake\ CoRE/Cybershake/v22p12/{} . --progress
 
 DATA_TYPES = ["Source", "IM", "BB"]
 
@@ -109,7 +110,7 @@ def download(
     if exc_fault is None:
         exc_fault = []
 
-    dropbox_path = f"dropbox:Cybershake/{dropbox_cs_ver}"
+    dropbox_path = f"{const.CYBERSHAKE_DIRECTORY}/{dropbox_cs_ver}"
 
     p = subprocess.Popen(
         f"rclone lsd {dropbox_path}",
@@ -120,7 +121,6 @@ def download(
     out, err = p.communicate()
     out = out.decode("utf-8")
     err = err.decode("utf-8")
-
     assert "ERROR" not in err, f"CS version not found: {dropbox_cs_ver}"
 
     fault_names = [x.split(" ")[-1] for x in out.split("\n") if len(x) > 0]

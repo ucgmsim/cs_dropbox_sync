@@ -7,8 +7,6 @@ import tarfile
 
 from dropbox_rclone import contants as const
 
-# rclone ls dropbox:/Quake\ CoRE/Public/Cybershake/v22p12|grep -e "Source\|IM"| sed -E 's/^[[:space:]]+//' |cut -d" " -f2 |xargs -I {} rclone copy dropbox:/Quake\ CoRE/Cybershake/v22p12/{} . --progress
-
 DATA_TYPES = ["Source", "IM", "BB"]
 
 TAR_ERROR_LOG = "tar_error.log"

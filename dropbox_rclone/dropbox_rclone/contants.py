@@ -1,2 +1,2 @@
 # Dropbox directory
-CYBERSHAKE_DIRECTORY = "dropbox:/Quake\ CoRE/Public/Cybershake"
+CYBERSHAKE_DIRECTORY = "dropbox:/QuakeCoRE/Public/Cybershake"

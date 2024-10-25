@@ -89,7 +89,26 @@ def cherrypick_files(where, pattern, num):
         return found, files
 
 
-def test_all_exist(data_type, fault_name):
+def test_all_exist(
+    data_type: str, fault_name: str, include_median: bool = True
+) -> None:
+    """
+    Check if specific files exist in a given directory and update a dictionary and DataFrame with the results.
+
+    Parameters
+    ----------
+    data_type : str
+        The type of data to check. eg. BB, Source, IM
+    fault_name : str
+        The name of the fault to check.
+    include_median : bool, optional
+        Whether to include the median file in the count. Defaults to True.
+
+    Returns
+    -------
+    None
+    """
+
     files_dict[fault_name][data_type] = {}
     where = cs_root / config[data_type]["where"].format(fault_name=fault_name)  #
     print(f"- Check {data_type} in {where}")
@@ -99,7 +118,11 @@ def test_all_exist(data_type, fault_name):
         col_ok = f"OK({data_type}_{wpat})"
         pat = pat.format(fault_name=fault_name)
         print(f"--  Check {pat}")
-        found, files = cherrypick_files(where, pat, rel_num_dict[fault_name])
+        num_expected = rel_num_dict[fault_name]
+        if include_median:
+            num_expected += 1
+        found, files = cherrypick_files(where, pat, num_expected)
+
         if found:
             print("---   Passed")
 

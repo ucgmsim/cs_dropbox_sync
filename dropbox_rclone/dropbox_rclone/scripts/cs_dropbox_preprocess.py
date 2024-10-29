@@ -11,7 +11,7 @@ STOCKTAKE_CSV = "stocktake.csv"
 
 # cs_root=Path("/scratch/x2568a02/UC/RunFolder/Cybershake/v22p4")
 FILES_DICT_FILE = Path().cwd() / "files_to_sync.yaml"
-DATA_TYPES = ["Source", "IM", "BB"]
+DATA_TYPES = ["Source", "IM", "BB", "SAMPLE_BB"]
 
 
 def load_args():
@@ -110,9 +110,16 @@ def test_all_exist(
     """
 
     files_dict[fault_name][data_type] = {}
-    where = cs_root / config[data_type]["where"].format(fault_name=fault_name)  #
+    if data_type == "SAMPLE_BB": 
+        config_for_type=config["BB"] # piggy-back on BB's logic below
+
+    else:
+        config_for_type=config[data_type]
+
+    where = cs_root / config_for_type["where"].format(fault_name=fault_name)  #
     print(f"- Check {data_type} in {where}")
-    for pat in config[data_type]["pattern"]:
+
+    for pat in config_for_type["pattern"]:
         wpat = pat.format(fault_name="*")
         col_num = f"num({data_type}_{wpat})"
         col_ok = f"OK({data_type}_{wpat})"
@@ -122,7 +129,12 @@ def test_all_exist(
         if include_median:
             num_expected += 1
         found, files = cherrypick_files(where, pat, num_expected)
-
+        
+        if data_type == "SAMPLE_BB":
+           files= [sorted(files)[0]]
+           col_num=f"num({data_type})"
+           col_ok=f"OK({data_type})"
+            
         if found:
             print("---   Passed")
 
@@ -132,12 +144,11 @@ def test_all_exist(
         for f in files:
             files_dict[fault_name][data_type][str(f)] = f.stat().st_size
 
-        stocktake_df[col_num].loc[fault_name] = len(files)
-        stocktake_df[col_ok].loc[fault_name] = found
-
+        stocktake_df.loc[fault_name, col_num]=len(files)
+        stocktake_df.loc[fault_name, col_ok]=found
 
 if __name__ == "__main__":
-    global config, rel_num_dict, files_dict, stocktake_df
+    global config, rel_num_dict, rel_start_idx_dict, files_dict, stocktake_df
 
     args = load_args()
 
@@ -158,11 +169,21 @@ if __name__ == "__main__":
     print(data_types)
 
     rel_num_dict = {}
+    rel_start_idx_dict = {}
     with open(fault_list, "r") as f:
         lines = f.readlines()
         for line in lines:
-            fault_name, num_rels = line.split()
-            rel_num_dict[fault_name] = int(num_rels.split("r")[0])
+            chunks = line.split()
+            if len(chunks) == 2:
+                fault_name, num_rels = chunks
+                rel_num_dict[fault_name] = int(num_rels.split("r")[0])
+                rel_start_idx_dict[fault_name] = 1
+            elif len(chunks) == 3: # sometimes list may have 3 columns, specifying number of first N rels to skip
+                fault_name, num_rels, skip_rels = chunks
+                num_rels= int(num_rels)
+                skip_rels=int(skip_rels.split("r")[0])
+                rel_num_dict[fault_name] = num_rels - skip_rels
+                rel_start_idx_dict[fault_name] = skip_rels + 1
 
     assert config.exists()
 
@@ -174,10 +195,15 @@ if __name__ == "__main__":
         index=list(rel_num_dict.keys()),
         columns=["rel_nums"],
     )
+    stocktake_df["rel_start"]=rel_start_idx_dict
 
     for (
         data_type
     ) in DATA_TYPES:  # stoktake CSV file is made for ALL data_types and patterns
+        if data_type == 'SAMPLE_BB':
+            stocktake_df[f"num({data_type})"]=0
+            stocktake_df[f"OK({data_type})"]=False
+            continue
         for pat in config[data_type]["pattern"]:
             wpat = pat.format(fault_name="*")
             col_num = f"num({data_type}_{wpat})"

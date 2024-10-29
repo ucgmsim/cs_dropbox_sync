@@ -13,7 +13,7 @@ OPTIONAL_PATTERN_MARKER = "$"
 FILES_TO_SYNC = "files_to_sync.yaml"
 UPLOAD_REPORT = "progress.yaml"
 
-DATA_TYPES = ["Source", "IM", "BB"]
+DATA_TYPES = ["Source", "IM", "BB", "SAMPLE_BB"]
 
 MAX_FILE_SIZE = 100 * 1073741824  # Maximum TAR file size
 
@@ -118,7 +118,7 @@ def copy_files(fault_name, data_type, work_dir):
     work_dir.mkdir(parents=True, exist_ok=True)
     for f in files_to_copy:
         original_path = Path(f)
-        if data_type == "BB":
+        if data_type == "BB" or data_type == "SAMPLE_BB":
             to_name = f"{original_path.parents[2].name}_{original_path.name}"  # eg BB.bin -> Dunstan_REL01_BB.bin
         else:
             to_name = original_path.name
@@ -221,6 +221,10 @@ def pack(fault_name, data_type):
     ):  # if "Source" is specified, we also need to look after "VM"
         all_good = all_good and copy_files(fault_name, "VM", work_dir)
 
+    if data_type == "SAMPLE_BB":
+        return all_good # no need to make a tar file
+
+
     all_files = sorted(list(work_dir.glob("*")))
 
     partition_list = __make_partition(
@@ -247,6 +251,7 @@ def pack(fault_name, data_type):
             print(f"#### Deleting existing {tf}")
             tf.unlink()
 
+
     for i, one_partition in enumerate(partition_list):
         files_str = " ".join([str(f.relative_to(work_dir)) for f in one_partition])
         print(f"#### Making {tar_files[i].relative_to(Path.cwd())}")
@@ -255,6 +260,8 @@ def pack(fault_name, data_type):
         # We are going into work_dir, so that files to add to tar file will have their basenames when untarred.
         cmd = f"tar cvf {tar_files[i]} {files_str}"
         print(cmd)
+            
+            
         p = subprocess.Popen(
             cmd,
             cwd=str(work_dir),
@@ -305,9 +312,9 @@ def upload(
     )
     p.communicate()
 
-    tar_file = f"{fault_name}_*.tar"  # may be multiple
+    filename_pat = f"{fault_name}_*"  # {fault_name}_IM.tar {fault_name}_Source.tar {fault_name}_BB.tar {fault_name}_BB.bin/{fault_name}_REL01_BB.bin
     to_upload_dir = to_upload_root / fault_name
-    tar_files_to_upload = [tf.name for tf in list(to_upload_dir.glob(tar_file))]
+    files_to_upload = [f.name for f in list(to_upload_dir.glob(filename_pat))]
 
     # rclone copy {src} {dest}
     # 1. {src} is a file, and {dest} is a file, trivial
@@ -334,7 +341,7 @@ def upload(
         p.communicate()
         print(f"#### Uploading {to_upload_dir.relative_to(Path.cwd())} completed")
 
-    tar_files_found = retrieve_dropbox_files(dropbox_dir, check_tar=True)
+    files_found = retrieve_dropbox_files(dropbox_dir, check_tar=True)
 
     # Extra verification. Checks one-way only. ie. source files must exist on remote
     # and difference (if any) is logged in check_file. Use --no_checksum argument if too slow
@@ -353,7 +360,7 @@ def upload(
         upload_success = len(diff_result) == 0
     else:
         # just check if the files are found in Dropbox. Might be adequate
-        upload_success = len(set(tar_files_to_upload) - set(tar_files_found)) == 0
+        upload_success = len(set(files_to_upload) - set(files_found)) == 0
 
     if upload_success:
         print(
@@ -364,37 +371,44 @@ def upload(
         print(f"#### ERROR: Upload failed")
         print(err.decode("utf-8"))
 
-    return upload_success, tar_files_found
+    return upload_success, files_found
 
 
-def mark_uploaded(fault_name, data_type, uploaded_tar_dict, log=True):
+def mark_uploaded(fault_name, data_type, uploaded_files_dict, log=True):
     if data_type == []:
-        uploaded_tar_dict[fault_name] = []
+        uploaded_files_dict[fault_name] = []
     else:
-        if data_type not in uploaded_tar_dict[fault_name]:
-            uploaded_tar_dict[fault_name].append(data_type)
+        if data_type not in uploaded_files_dict[fault_name]:
+            uploaded_files_dict[fault_name].append(data_type)
     report_path = work_root / f"{fault_name}_{UPLOAD_REPORT}"
 
     if log:
         with open(report_path, "w") as f:
-            yaml.dump(uploaded_tar_dict[fault_name], f)
+            yaml.dump(uploaded_files_dict[fault_name], f)
 
 
-def update_uploaded_status(tar_files, uploaded_tar_dict, log=True, debug=True):
+def update_uploaded_status(tar_files, uploaded_files_dict, log=True, debug=True):
     tar_group = {}
     for tar_file in tar_files:
         try:
             chunks = tar_file.split(".tar")[0].split("_")
         except ValueError:
             continue
-        if len(chunks) == 2:  # single tar file
-            fault_name, data_type = chunks
-            num = None
-        elif len(chunks) == 3:  # this belongs to a tar group
-            fault_name, data_type, num = chunks
+
+        if chunks[-1] == "BB.bin":
+            fault_name=chunks[0]
+            data_type='BB'
+            num = 0 #this is a sample BB (median or REL01), not a tar file
         else:
-            # this is not in the format we want, pass
-            continue
+            if len(chunks) == 2:  # single tar file
+                fault_name, data_type = chunks
+                num = None
+
+            elif len(chunks) == 3:  # this belongs to a tar group
+                fault_name, data_type, num = chunks
+            else:
+                # this is not in the format we want, pass
+                continue
         if fault_name not in fault_names:
             continue  # unknown fault_name
         if data_type not in DATA_TYPES:
@@ -403,7 +417,7 @@ def update_uploaded_status(tar_files, uploaded_tar_dict, log=True, debug=True):
             #           print(f"{fault_name} {data_type} {size}")
             if num is None:  # single tar file
                 # easy, this has been uploaded.
-                mark_uploaded(fault_name, data_type, uploaded_tar_dict, log=log)
+                mark_uploaded(fault_name, data_type, uploaded_files_dict, log=log)
 
             else:  # tar group is considered fully uploaded if below satisfies
                 #                print(f"{fault_name} {data_type} has tar_group")
@@ -416,7 +430,7 @@ def update_uploaded_status(tar_files, uploaded_tar_dict, log=True, debug=True):
                 this_tar_group.found(num)  # report "num"-th partition has been found
                 if this_tar_group.all_found() and debug:
                     print(f"{fault_name} {data_type} all partitions confirmed uploaded")
-                mark_uploaded(fault_name, data_type, uploaded_tar_dict, log=log)
+                mark_uploaded(fault_name, data_type, uploaded_files_dict, log=log)
 
 
 if __name__ == "__main__":
@@ -430,6 +444,8 @@ if __name__ == "__main__":
     data_types = args.data_types
     overwrite = args.overwrite
     do_checksum = args.do_checksum
+
+    
 
     assert cs_root.exists()
     assert files_to_sync.exists()
@@ -466,18 +482,18 @@ if __name__ == "__main__":
             )
             p.communicate()
 
-    uploaded_tar = {}
+    uploaded_files = {}
     for fault_name in fault_names:
-        mark_uploaded(fault_name, [], uploaded_tar)
+        mark_uploaded(fault_name, [], uploaded_files)
 
     print(f"#### Files in {dropbox_path}")
     tar_files = retrieve_dropbox_files(
         dropbox_path
     )  # may contain non-tar files or tar files not in the desired format. Will be filtered out by the next step
-    update_uploaded_status(tar_files, uploaded_tar)
+    update_uploaded_status(tar_files, uploaded_files)
 
     print(f"#### Files already uploaded at {dropbox_path}")
-    print(uploaded_tar)
+    print(uploaded_files)
 
     for fault_name in fault_names:
         print("\n\n-------------------------------")
@@ -495,14 +511,14 @@ if __name__ == "__main__":
 
         to_upload_dir.mkdir(parents=True, exist_ok=True)
         for data_type in data_types:
+
             if overwrite or (
-                data_type not in uploaded_tar[fault_name]
+                data_type not in uploaded_files[fault_name]
             ):  # skip already uploaded file unless overwrite enforced
-                if overwrite and data_type in uploaded_tar[fault_name]:
+                if overwrite and data_type in uploaded_files[fault_name]:
                     print(
                         f"#### Warning: Existing {fault_name} {data_type} will be overwritten"
                     )
-
                 pack_ok[data_type] = pack(fault_name, data_type)
                 if not pack_ok[data_type]:
                     print(
@@ -515,27 +531,27 @@ if __name__ == "__main__":
             upload_ok, tar_files_uploaded = upload(fault_name, do_checksum)
             assert upload_ok, "!!!! CRITICAL: Upload failed for {fault_name}"
 
-            update_uploaded_status(tar_files_uploaded, uploaded_tar)
+            update_uploaded_status(tar_files_uploaded, uploaded_files)
 
     print(f"#### Upload finished. Verification begins")
 
     error_count = 0
     for fault_name in fault_names:
         for data_type in data_types:
-            if data_type not in uploaded_tar[fault_name]:
+            if data_type not in uploaded_files[fault_name]:
                 print(f"!!! {fault_name}_{data_type}*.tar had an uploading issue")
                 error_count += 1
 
     # verify if the supposely uploaded files indeed exist
     tar_files_found = retrieve_dropbox_files(dropbox_path, check_tar=True, debug=False)
-    uploaded_tar_2 = {}
+    uploaded_files_2 = {}
     for fault_name in fault_names:
-        mark_uploaded(fault_name, [], uploaded_tar_2)
+        mark_uploaded(fault_name, [], uploaded_files_2)
 
-    update_uploaded_status(tar_files_found, uploaded_tar_2, log=False, debug=False)
+    update_uploaded_status(tar_files_found, uploaded_files_2, log=False, debug=False)
     for fault_name in fault_names:
-        for dt in uploaded_tar[fault_name]:  # IM, BB, Source
-            if dt not in uploaded_tar_2[fault_name]:
+        for dt in uploaded_files[fault_name]:  # IM, BB, Source
+            if dt not in uploaded_files_2[fault_name]:
                 print(
                     f"!!! {fault_name}_{data_type}*.tar successfully uploaded, but not found online"
                 )

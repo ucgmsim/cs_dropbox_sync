@@ -214,6 +214,9 @@ def pack(fault_name, data_type):
 
     tarfile_prefix_inc_path = to_upload_root / fault_name / tarfile_prefix
 
+    if data_type == "SAMPLE_BB":
+        return copy_files(fault_name, data_type, to_upload_dir) # no need to make a tar file
+
     all_good = copy_files(fault_name, data_type, work_dir)
 
     if (
@@ -221,8 +224,6 @@ def pack(fault_name, data_type):
     ):  # if "Source" is specified, we also need to look after "VM"
         all_good = all_good and copy_files(fault_name, "VM", work_dir)
 
-    if data_type == "SAMPLE_BB":
-        return all_good # no need to make a tar file
 
 
     all_files = sorted(list(work_dir.glob("*")))
@@ -398,7 +399,7 @@ def update_uploaded_status(tar_files, uploaded_files_dict, log=True, debug=True)
         if chunks[-1] == "BB.bin":
             fault_name=chunks[0]
             data_type='BB'
-            num = 0 #this is a sample BB (median or REL01), not a tar file
+            num = None #this is a sample BB (median or REL01), not a tar file
         else:
             if len(chunks) == 2:  # single tar file
                 fault_name, data_type = chunks

@@ -3,6 +3,7 @@ from pathlib import Path
 
 import subprocess
 import shutil
+from typing import List, Dict, Tuple
 import yaml
 
 from dropbox_rclone import contants as const
@@ -65,7 +66,10 @@ def load_args():
     return args
 
 
-def check_rclone():
+def check_rclone() -> None:
+    """
+    Check if rclone is installed
+    """
     p = subprocess.Popen(
         "which rclone", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
     )
@@ -73,7 +77,27 @@ def check_rclone():
     assert len(err.decode("utf-8")) == 0, "rclone is not found"
 
 
-def retrieve_dropbox_files(dropbox_link, check_tar=False, debug=True):
+def retrieve_dropbox_files(
+    dropbox_link: Path, check_tar: bool = False, debug: bool = True
+) -> List[str]:
+    """
+    Retrieve file names from the dropbox directory
+
+    Parameters
+    ----------
+    dropbox_link:  Path
+        Path to the dropbox directory. eg. dropbox:/QuakeCoRE/Public/Cybershake/v24p8
+    check_tar: bool
+        If True, check if the TAR files satisfying the correct naming scheme and collect them only
+        Naming should be {fault_name}_{data_type}_{num}.tar or {fault_name}_{data_type}.tar
+    debug: bool
+        If True, print the file names found
+    Returns
+    -------
+    List[str]
+        list of file names found
+
+    """
     # check_tar = True enforces collection of "desirable" TAR files only
 
     files_found = []
@@ -107,7 +131,26 @@ def retrieve_dropbox_files(dropbox_link, check_tar=False, debug=True):
     return files_found
 
 
-def copy_files(fault_name, data_type, work_dir):
+def copy_files(fault_name: str, data_type: str, work_dir: Path) -> bool:
+    """
+    Copy files from the source to the work directory
+
+    Parameters
+    ----------
+    fault_name: str
+        Fault name
+    data_type: str
+        Data type to copy. Can be BB, IM, Source, SAMPLE_BB
+    work_dir: Path
+        Working directory to copy files to
+
+    Returns
+    -------
+    bool
+        True if all files are copied successfully, False otherwise
+
+
+    """
     all_good = True
 
     # chery_pick files and copy to work directory
@@ -146,23 +189,45 @@ def copy_files(fault_name, data_type, work_dir):
 
 
 class TARGroup:
-    # Used to handle a group of TAR files when files to be archived are need to be partitioned due to upload size limit
-    # If a tar file, such as AlpineK2T_BB.tar is going to be larger than size limit (100Gb currently), we will partition files
-    # such that the resulting tar files below the size limit.
-    # As a result, we have AlpineK2T_BB_0.tar, AlpineK2T_BB_2.tar ..., with the last one ending with "f", such as AlpineK2T_BB_3f.tar
-    # This way, we know we have a complete set of TAR files if we find all 0, 1 ..3 labeled files with the AlpineK2T_BB prefix.
+    """
+    Used to handle a group of TAR files when files to be archived are need to be partitioned due to upload size limit
+
+    If a tar file, such as AlpineK2T_BB.tar is going to be larger than size limit (100Gb currently), we will partition files
+    such that the resulting tar files below the size limit.
+    As a result, we have AlpineK2T_BB_0.tar, AlpineK2T_BB_2.tar ..., with the last one ending with "f", such as AlpineK2T_BB_3f.tar
+    This way, we know we have a complete set of TAR files if we find all 0, 1 ..3 labeled files with the AlpineK2T_BB prefix.
+    """
 
     def __init__(self):
         self.found_partitions = []
         self.size = None  # number of partitions, initially unknown
 
-    def get_size(self):
+    def get_size(self) -> int:
         return self.size
 
-    def is_size_known(self):
+    def is_size_known(self) -> bool:
+        """
+        Check if the size of the TAR group is known
+        Returns
+        -------
+        bool
+            True if the size is known, False otherwise
+        """
         return self.size is not None
 
-    def found(self, num):
+    def found(self, num: str) -> None:
+        """
+        Report that a partition has been found
+        Parameters
+        ----------
+        num : str
+            The partition number found. Ends with "f" if it is the last partition
+            eg. num=1, 2, 3f when AlpineK2T_BB_3f.tar is the last partition
+
+        Returns
+        -------
+        None
+        """
         if num.endswith("f"):  # The last partition ends with "f"
             num = int(num.strip("f"))
             self.size = num + 1
@@ -171,11 +236,32 @@ class TARGroup:
 
         self.found_partitions.append(num)
 
-    def all_found(self):
+    def all_found(self) -> bool:
+        """
+        Check if all partitions have been found
+        Returns
+        -------
+        bool
+            True if all partitions have been found, False otherwise
+        """
         return self.size == len(self.found_partitions)
 
 
-def __make_partition(all_files):
+def __make_partition(all_files: List[Path]) -> List[List[Path]]:
+    """
+    Make partitions of files if the total size exceeds the limit
+
+    Parameters
+    ----------
+    all_files:  List[Path]
+        List of files to partition
+
+    Returns
+    -------
+    List[List[Path]]
+        List of partitions of files
+
+    """
     partition_list = []
     if len(all_files) == 0:
         print(
@@ -192,7 +278,7 @@ def __make_partition(all_files):
             one_partition.append(f)
             partition_size += f.stat().st_size
         else:  # including this will exceed. Finalize the current subset, start a new one
-            # TODO: f is assumned to be smaller than the size limit
+            # TODO: Currently f is assumed to be smaller than the size limit. Fix this if this assumption is not valid
             partition_list.append(one_partition)
             # print(one_partition)
             # print(partition_size)
@@ -206,7 +292,23 @@ def __make_partition(all_files):
     return partition_list
 
 
-def pack(fault_name, data_type):
+def pack(fault_name: str, data_type: str) -> bool:
+    """
+    Pack files into TAR files
+
+    Parameters
+    ----------
+    fault_name: str
+        Fault name
+    data_type:  str
+        Data type to pack. Can be BB, IM, Source, SAMPLE_BB
+
+    Returns
+    -------
+    bool
+        True if all files are packed successfully, False otherwise
+    """
+
     work_dir = to_pack_root / fault_name / data_type
     tarfile_prefix = f"{fault_name}_{data_type}"
 
@@ -214,8 +316,12 @@ def pack(fault_name, data_type):
 
     tarfile_prefix_inc_path = to_upload_root / fault_name / tarfile_prefix
 
-    if data_type == "SAMPLE_BB":
-        return copy_files(fault_name, data_type, to_upload_dir) # no need to make a tar file
+    if (
+        data_type == "SAMPLE_BB"
+    ):  # SAMPLE_BB is a single file, not packed into a TAR file
+        return copy_files(
+            fault_name, data_type, to_upload_dir
+        )  # no need to make a tar file
 
     all_good = copy_files(fault_name, data_type, work_dir)
 
@@ -223,8 +329,6 @@ def pack(fault_name, data_type):
         data_type == "Source"
     ):  # if "Source" is specified, we also need to look after "VM"
         all_good = all_good and copy_files(fault_name, "VM", work_dir)
-
-
 
     all_files = sorted(list(work_dir.glob("*")))
 
@@ -252,7 +356,6 @@ def pack(fault_name, data_type):
             print(f"#### Deleting existing {tf}")
             tf.unlink()
 
-
     for i, one_partition in enumerate(partition_list):
         files_str = " ".join([str(f.relative_to(work_dir)) for f in one_partition])
         print(f"#### Making {tar_files[i].relative_to(Path.cwd())}")
@@ -261,8 +364,7 @@ def pack(fault_name, data_type):
         # We are going into work_dir, so that files to add to tar file will have their basenames when untarred.
         cmd = f"tar cvf {tar_files[i]} {files_str}"
         print(cmd)
-            
-            
+
         p = subprocess.Popen(
             cmd,
             cwd=str(work_dir),
@@ -303,9 +405,27 @@ def pack(fault_name, data_type):
 
 
 def upload(
-    fault_name,
-    do_checksum,
-):  # Just upload everything from this fault_name's to_upload directory.
+    fault_name: str,
+    do_checksum: bool = True,
+) -> Tuple[bool, List[str]]:
+    """
+    Upload files to Dropbox
+
+    Parameters
+    ----------
+    fault_name: str
+        Fault name
+    do_checksum: bool, default=True
+        If True, check if the files are uploaded correctly by comparing checksums
+
+    Returns
+    -------
+    Tuple[bool, List[str]]
+        True if the files are uploaded successfully, False otherwise
+        List of files uploaded
+
+    """
+    # Just upload everything from this fault_name's to_upload directory.
     # rclone uploads multiple files from the directory in parallel, maximising upload traffic
     dropbox_dir = f"{dropbox_path}/{fault_name}"
     p = subprocess.Popen(
@@ -375,7 +495,27 @@ def upload(
     return upload_success, files_found
 
 
-def mark_uploaded(fault_name, data_type, uploaded_files_dict, log=True):
+def mark_uploaded(
+    fault_name: str, data_type: str, uploaded_files_dict: Dict, log: bool = True
+) -> None:
+    """
+    Mark the uploaded files in the dictionary
+
+    Parameters
+    ----------
+    fault_name : str
+        Fault name
+    data_type: str
+        Data type. Can be BB, IM, Source, SAMPLE_BB
+
+    uploaded_files_dict: Dict
+        Dictionary to keep track of uploaded files
+    log: bool, default=True
+        If True, write the updated dictionary to a file
+    Returns
+    -------
+    None
+    """
     if data_type == []:
         uploaded_files_dict[fault_name] = []
     else:
@@ -388,7 +528,31 @@ def mark_uploaded(fault_name, data_type, uploaded_files_dict, log=True):
             yaml.dump(uploaded_files_dict[fault_name], f)
 
 
-def update_uploaded_status(tar_files, uploaded_files_dict, log=True, debug=True):
+def update_uploaded_status(
+    tar_files: List[str],
+    uploaded_files_dict: Dict,
+    log: bool = True,
+    debug: bool = True,
+) -> None:
+    """
+    Update the uploaded status of the files
+
+    Parameters
+    ----------
+    tar_files: List[str]
+        List of TAR files found in the dropbox directory
+    uploaded_files_dict
+        Dictionary to keep track of uploaded files
+    log : bool, default=True
+        If True, write the updated dictionary to a file
+    debug: bool, default=True
+        If True, print debug information
+
+    Returns
+    -------
+    None
+
+    """
     tar_group = {}
     for tar_file in tar_files:
         try:
@@ -397,9 +561,9 @@ def update_uploaded_status(tar_files, uploaded_files_dict, log=True, debug=True)
             continue
 
         if chunks[-1] == "BB.bin":
-            fault_name=chunks[0]
-            data_type='BB'
-            num = None #this is a sample BB (median or REL01), not a tar file
+            fault_name = chunks[0]
+            data_type = "BB"
+            num = None  # this is a sample BB (median or REL01), not a tar file
         else:
             if len(chunks) == 2:  # single tar file
                 fault_name, data_type = chunks
@@ -446,9 +610,8 @@ if __name__ == "__main__":
     overwrite = args.overwrite
     do_checksum = args.do_checksum
 
-    
-
     assert cs_root.exists()
+    assert files_to_sync.exists()
     assert files_to_sync.exists()
 
     check_rclone()

@@ -36,23 +36,21 @@ Note that Source pattern `{fault_name}.info` and `{fault_name}.csv` at lines 14-
   6 IM:
   7   where: "Runs/{fault_name}"
   8   pattern:
-  9     - "*/IM_calc/*.csv"
+  9     - "*/IM_calc/{fault_name}*.csv"
  10 
  11 Source:
  12   where: "Data/Sources/{fault_name}"
  13   pattern:
- 14     - "{fault_name}.info"
- 15     - "{fault_name}.csv"
- 16     - "Srf/*REL*.info"
- 17     - "Srf/*REL*.csv"
- 18 
- 19 VM:
- 20   where: "Data/VMs/{fault_name}"
- 21   pattern:
- 22       - "vm_params.yaml"
- 23       - "nzvm.cfg"
- 24       - "$*.pertb.csv"
-~                                
+ 14     - "Srf/{fault_name}*.info"
+ 15     - "Srf/{fault_name}*.csv"
+ 16     - "Sim_params/{fault_name}*.yaml"
+ 17 
+ 18 VM:
+ 19   where: "Data/VMs/{fault_name}"
+ 20   pattern:
+ 21       - "vm_params.yaml"
+ 22       - "nzvm.cfg"
+ 23       - "${fault_name}_REL*.pertb.csv"
 
 ```
 
@@ -76,8 +74,10 @@ Optional `--config` can be used to supply a modified version of `sync_patterns.y
  11 Source:
  12   where: "Data/Sources/{fault_name}"
  13   pattern:
- 14     - "Srf/{fault_name}.info"
- 15     - "Srf/{fault_name}.csv"
+ 14     - "Srf/{fault_name}*.info"
+ 15     - "Srf/{fault_name}*.csv"
+ 16     - "Sim_params/{fault_name}*.yaml"
+
 ```
 
 Then I supplied this `sync_patterns.yaml` as an optional argument `--config ./sync_patterns.yaml` as shown below.
@@ -85,7 +85,7 @@ Then I supplied this `sync_patterns.yaml` as an optional argument `--config ./sy
 eg. 
 ```
 (python3_mahuika) baes@mahuika01: /nesi/nobackup/nesi00213/RunFolder/Cybershake/v22p12$ python $nobackup/baes/cs_dropbox_sync/cs_dropbox_preprocess.py ./ ./list.txt  --config sync_patterns.yaml 
-['Source', 'IM', 'BB', 'VM']
+['Source', 'IM', 'BB', 'VM', "SAMPLE_BB"]
 
 ...
 OhariuC
@@ -163,14 +163,19 @@ The contents of `files_to_sync.yaml` may look like this.
 ...
 176     Data/VMs/BooBooEAST/nzvm.cfg: 439
 177     Data/VMs/BooBooEAST/vm_params.yaml: 994
+..
+210   SAMPLE_BB:
+211     Runs/BooBooEAST/BooBooEAST_REL01/BB/Acc/BB.bin: 1560129496
+
 
 ```
 
 For each fault in a separate section of YAML, we have subsections for each data type, BB, IM, Source, VM and list of files and their size, where the size will be used to verify if the copy of file is good.
 At the top level, there is "." section that includes `list.txt` and `stocktake.csv`, which contain the essential information about the integrity of this data archive. We will keep them in Dropbox too.
 
-By default, this script will check every data type. However, if you wish to process specific data type only (eg. if you only have BB data to upload), you can use `-t` option. eg. `-t BB`. We have only 3 choices. `BB`,`IM` and `Source` - notice that there is no `VM`, even if `files_to_sync.yaml` does have a subsection for VM. Just use `Source` instead - Both Source and VM data are archived into a same TAR file anyway.
+By default, this script will check every data type. However, if you wish to process specific data type only (eg. if you only have BB data to upload), you can use `-t` option. eg. `-t BB`. We have only 4 choices. `BB`,`IM`,`Source` and `SAMPLE_BB`  - notice that there is no `VM`, even if `files_to_sync.yaml` does have a subsection for VM. Just use `Source` instead - Both Source and VM data are archived into a same TAR file anyway.
 
+`SAMPLE_BB` is usually the BB.bin of the median event if available, or of the first realisation.
 ## Step 3. Upload
 
 If all good, we can start upload files using `cs_dropbox_upload.py`. It uses two mandatory arguments.

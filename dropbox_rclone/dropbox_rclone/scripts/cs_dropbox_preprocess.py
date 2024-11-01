@@ -1,7 +1,8 @@
 import argparse
-import hashlib
+
 import pandas as pd
 from pathlib import Path
+from typing import List, Tuple
 import yaml
 
 CONFIG = "sync_patterns.yaml"
@@ -57,7 +58,26 @@ def load_args():
     return args
 
 
-def cherrypick_files(where, pattern, num):
+def cherrypick_files(where: Path, pattern: str, num: int) -> Tuple[bool, List[Path]]:
+    """
+    Check if specific files exist in a given directory and return the result.
+
+    Parameters
+    ----------
+    where: Path
+        Directory to check
+    pattern: str
+        Pattern to match
+    num: int
+        Number of files to match
+
+    Returns
+    -------
+    Tuple[bool, List[str]]
+        True if the all files are found successfully, False otherwise
+        List of files found
+
+    """
     optional = False
     if pattern.startswith(OPTIONAL_PATTERN_MARKER):
         print(f"---   {pattern} is optional")
@@ -110,11 +130,11 @@ def test_all_exist(
     """
 
     files_dict[fault_name][data_type] = {}
-    if data_type == "SAMPLE_BB": 
-        config_for_type=config["BB"] # piggy-back on BB's logic below
+    if data_type == "SAMPLE_BB":
+        config_for_type = config["BB"]  # piggy-back on BB's logic below
 
     else:
-        config_for_type=config[data_type]
+        config_for_type = config[data_type]
 
     where = cs_root / config_for_type["where"].format(fault_name=fault_name)  #
     print(f"- Check {data_type} in {where}")
@@ -129,12 +149,12 @@ def test_all_exist(
         if include_median:
             num_expected += 1
         found, files = cherrypick_files(where, pat, num_expected)
-        
+
         if data_type == "SAMPLE_BB":
-           files= [sorted(files)[0]]
-           col_num=f"num({data_type})"
-           col_ok=f"OK({data_type})"
-            
+            files = [sorted(files)[0]]
+            col_num = f"num({data_type})"
+            col_ok = f"OK({data_type})"
+
         if found:
             print("---   Passed")
 
@@ -144,8 +164,9 @@ def test_all_exist(
         for f in files:
             files_dict[fault_name][data_type][str(f)] = f.stat().st_size
 
-        stocktake_df.loc[fault_name, col_num]=len(files)
-        stocktake_df.loc[fault_name, col_ok]=found
+        stocktake_df.loc[fault_name, col_num] = len(files)
+        stocktake_df.loc[fault_name, col_ok] = found
+
 
 if __name__ == "__main__":
     global config, rel_num_dict, rel_start_idx_dict, files_dict, stocktake_df
@@ -178,10 +199,12 @@ if __name__ == "__main__":
                 fault_name, num_rels = chunks
                 rel_num_dict[fault_name] = int(num_rels.split("r")[0])
                 rel_start_idx_dict[fault_name] = 1
-            elif len(chunks) == 3: # sometimes list may have 3 columns, specifying number of first N rels to skip
+            elif (
+                len(chunks) == 3
+            ):  # sometimes list may have 3 columns, specifying number of first N rels to skip
                 fault_name, num_rels, skip_rels = chunks
-                num_rels= int(num_rels)
-                skip_rels=int(skip_rels.split("r")[0])
+                num_rels = int(num_rels)
+                skip_rels = int(skip_rels.split("r")[0])
                 rel_num_dict[fault_name] = num_rels - skip_rels
                 rel_start_idx_dict[fault_name] = skip_rels + 1
 
@@ -195,14 +218,14 @@ if __name__ == "__main__":
         index=list(rel_num_dict.keys()),
         columns=["rel_nums"],
     )
-    stocktake_df["rel_start"]=rel_start_idx_dict
+    stocktake_df["rel_start"] = rel_start_idx_dict
 
     for (
         data_type
     ) in DATA_TYPES:  # stoktake CSV file is made for ALL data_types and patterns
-        if data_type == 'SAMPLE_BB':
-            stocktake_df[f"num({data_type})"]=0
-            stocktake_df[f"OK({data_type})"]=False
+        if data_type == "SAMPLE_BB":
+            stocktake_df[f"num({data_type})"] = 0
+            stocktake_df[f"OK({data_type})"] = False
             continue
         for pat in config[data_type]["pattern"]:
             wpat = pat.format(fault_name="*")

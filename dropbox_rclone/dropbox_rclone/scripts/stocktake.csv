@@ -1,6 +1,0 @@
-,rel_nums,num(Source_Srf/**.info),OK(Source_Srf/**.info),num(Source_Srf/**.csv),OK(Source_Srf/**.csv),num(Source_Sim_params/**.yaml),OK(Source_Sim_params/**.yaml),num(IM_*/IM_calc/**.csv),OK(IM_*/IM_calc/**.csv),num(BB_*/BB/Acc/BB.bin),OK(BB_*/BB/Acc/BB.bin),num(VM_vm_params.yaml),OK(VM_vm_params.yaml),num(VM_nzvm.cfg),OK(VM_nzvm.cfg),num(VM_$*_REL*.pertb.csv),OK(VM_$*_REL*.pertb.csv)
-2122842,100,101,True,101,True,101,True,101,True,101,True,1,True,1,True,0,True
-2128373,100,101,True,101,True,101,True,101,True,101,True,1,True,1,True,0,True
-2148461,100,101,True,101,True,101,True,101,True,101,True,1,True,1,True,0,True
-2252479,100,101,True,101,True,101,True,101,True,101,True,1,True,1,True,0,True
-2266782,100,101,True,101,True,101,True,101,True,101,True,1,True,1,True,0,True

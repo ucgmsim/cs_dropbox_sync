@@ -280,15 +280,11 @@ def __make_partition(all_files: List[Path]) -> List[List[Path]]:
         else:  # including this will exceed. Finalize the current subset, start a new one
             # TODO: Currently f is assumed to be smaller than the size limit. Fix this if this assumption is not valid
             partition_list.append(one_partition)
-            # print(one_partition)
-            # print(partition_size)
             partition_size = f.stat().st_size
             one_partition = [f]
 
     if one_partition:  # last partition
         partition_list.append(one_partition)
-        # print(one_partition)
-        # print(partition_size)
     return partition_list
 
 

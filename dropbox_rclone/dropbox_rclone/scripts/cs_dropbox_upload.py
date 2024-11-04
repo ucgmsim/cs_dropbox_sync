@@ -190,10 +190,10 @@ def copy_files(fault_name: str, data_type: str, work_dir: Path) -> bool:
 
 class TARGroup:
     """
-    Used to handle a group of TAR files when files to be archived are need to be partitioned due to upload size limit
+    Used to handle a group of TAR files when files to be archived need to be partitioned due to upload size limit
 
     If a tar file, such as AlpineK2T_BB.tar is going to be larger than size limit (100Gb currently), we will partition files
-    such that the resulting tar files below the size limit.
+    such that the resulting tar files are below the size limit.
     As a result, we have AlpineK2T_BB_0.tar, AlpineK2T_BB_2.tar ..., with the last one ending with "f", such as AlpineK2T_BB_3f.tar
     This way, we know we have a complete set of TAR files if we find all 0, 1 ..3 labeled files with the AlpineK2T_BB prefix.
     """

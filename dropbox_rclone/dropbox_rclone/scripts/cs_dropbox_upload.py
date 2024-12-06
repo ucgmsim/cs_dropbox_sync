@@ -495,7 +495,7 @@ def mark_uploaded(
     fault_name: str, data_type: str, uploaded_files_dict: Dict, log: bool = True
 ) -> None:
     """
-    Mark the specified data type has been uploaded for the given fault name. 
+    Mark the specified data type has been uploaded for the given fault name.
     uploaded_files_dict[fault_name]=[BB,IM] means BB and IM data have been uploaded for fault_name
 
     Parameters
@@ -514,7 +514,7 @@ def mark_uploaded(
     None
     """
     if data_type is None:
-        uploaded_files_dict[fault_name] = [] # initislizing an empty list
+        uploaded_files_dict[fault_name] = []  # initislizing an empty list
     else:
         if data_type not in uploaded_files_dict[fault_name]:
             uploaded_files_dict[fault_name].append(data_type)
@@ -645,7 +645,7 @@ if __name__ == "__main__":
 
     uploaded_files = {}
     for fault_name in fault_names:
-        mark_uploaded(fault_name, None, uploaded_files) #initializing uploaded_files
+        mark_uploaded(fault_name, None, uploaded_files)  # initializing uploaded_files
 
     print(f"#### Files in {dropbox_path}")
     tar_files = retrieve_dropbox_files(
@@ -707,7 +707,7 @@ if __name__ == "__main__":
     tar_files_found = retrieve_dropbox_files(dropbox_path, check_tar=True, debug=False)
     retrieved_files = {}
     for fault_name in fault_names:
-        mark_uploaded(fault_name, None, retrieved_files) # initializing retrieved_files
+        mark_uploaded(fault_name, None, retrieved_files)  # initializing retrieved_files
 
     update_uploaded_status(tar_files_found, retrieved_files, log=False, debug=False)
     for fault_name in fault_names:

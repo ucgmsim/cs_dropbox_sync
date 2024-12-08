@@ -6,23 +6,22 @@ BB:
 IM:
   where: "Runs/{fault_name}"
   pattern:
-    - "*/IM_calc/*.csv"
+    - "*/IM_calc/{fault_name}*.csv"
 
 Source:
   where: "Data/Sources/{fault_name}"
   pattern:
 # Old CS runs
-    - "{fault_name}.info"
-    - "{fault_name}.csv"
+#    - "{fault_name}.info"
+#    - "{fault_name}.csv"
 # New CS runs
-#  - "Srf/{fault_name}.info"
-#  - "Srf/{fault_name}.csv"
-    - "Srf/{fault_name}_REL??.info"
-    - "Srf/{fault_name}_REL??.csv"
+    - "Srf/{fault_name}*.info"
+    - "Srf/{fault_name}*.csv"
+    - "Sim_params/{fault_name}*.yaml"
 
 VM:
   where: "Data/VMs/{fault_name}"
   pattern:
       - "vm_params.yaml"
       - "nzvm.cfg"
-      - "${fault_name}_REL??.pertb.csv"
+      - "${fault_name}_REL*.pertb.csv"

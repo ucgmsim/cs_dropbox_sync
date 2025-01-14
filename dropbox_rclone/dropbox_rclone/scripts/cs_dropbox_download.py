@@ -5,7 +5,7 @@ import os
 
 import tarfile
 
-from dropbox_rclone import contants as const
+from dropbox_rclone import constants as const
 
 DATA_TYPES = ["Source", "IM", "BB"]
 

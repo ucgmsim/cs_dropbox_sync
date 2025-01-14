@@ -3,7 +3,7 @@ import subprocess
 
 import dropbox
 
-from dropbox_rclone import contants as const
+from dropbox_rclone import constants as const
 
 
 def find_available_runs():

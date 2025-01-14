@@ -713,7 +713,7 @@ if __name__ == "__main__":
         for dt in uploaded_files[fault_name]:  # IM, BB, Source
             if dt not in uploaded_files_2[fault_name]:
                 print(
-                    f"!!! {fault_name}_{data_type}*.tar successfully uploaded, but not found online"
+                    f"!!! {fault_name} : {data_type} supposedly uploaded, but not found online"
                 )
                 error_count += 1
 

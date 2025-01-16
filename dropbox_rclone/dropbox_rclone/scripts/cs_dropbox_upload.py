@@ -6,7 +6,7 @@ import shutil
 from typing import List, Dict, Tuple
 import yaml
 
-from dropbox_rclone import contants as const
+from dropbox_rclone import constants as const
 
 FILE_PATTERN_CONF = "sync_patterns.yaml"
 OPTIONAL_PATTERN_MARKER = "$"
@@ -559,7 +559,7 @@ def update_uploaded_status(
 
         if chunks[-1] == "BB.bin":
             fault_name = chunks[0]
-            data_type = "BB"
+            data_type = "SAMPLE_BB"
             num = None  # this is a sample BB (median or REL01), not a tar file
         else:
             if len(chunks) == 2:  # single tar file
@@ -700,7 +700,7 @@ if __name__ == "__main__":
     for fault_name in fault_names:
         for data_type in data_types:
             if data_type not in uploaded_files[fault_name]:
-                print(f"!!! {fault_name}_{data_type}*.tar had an uploading issue")
+                print(f"!!! {fault_name} : {data_type}  had an uploading issue")
                 error_count += 1
 
     # verify if the files uploaded are truly found on Dropbox
@@ -714,7 +714,7 @@ if __name__ == "__main__":
         for dt in uploaded_files[fault_name]:  # IM, BB, Source
             if dt not in retrieved_files[fault_name]:
                 print(
-                    f"!!! {fault_name}_{data_type}*.tar successfully uploaded, but not found online"
+                    f"!!! {fault_name} : {data_type} supposedly uploaded, but not found online"
                 )
                 error_count += 1
 
